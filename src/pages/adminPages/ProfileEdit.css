@@ -1,0 +1,259 @@
+.profile-modal {
+  width: 600px;
+  background: #d1f3f8;
+  border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(100, 96, 96, 0.15);
+  margin: 40px auto;
+  padding: 30px 30px 20px 30px;
+  position: relative;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #d9534f;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #b52a25;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #d1f3f8; /* light blue */
+  padding: 10px 20px;
+  border-radius: 10px;
+}
+
+.profile-name {
+  font-size: 1.3rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.form-row label {
+  flex: 1;
+  font-weight: 700;
+  color: #222;
+  text-align: left;
+  font-size: 1.08rem;
+}
+
+.form-row input {
+  flex: 2;
+  padding: 10px 16px;
+  border: 1px solid #b2bec3;
+  border-radius: 10px;
+  font-size: 1.08rem;
+  background: #fff;
+  outline: none;
+  transition: border 0.2s;
+  text-align: left;
+  color: #555;
+}
+
+.form-row input:read-only {
+  background: #f7fafd;
+  color: #888;
+}
+
+.form-row input:focus {
+  border: 1.5px solid #00b894;
+}
+
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.reset-btn {
+  background: #d9534f;
+  color: #fff;
+  border: none;
+  padding: 8px 28px;
+  border-radius: 7px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.reset-btn:hover {
+  background: #b52a25;
+}
+
+.save-btn {
+  background: #27ae60;
+  color: #fff;
+  border: none;
+  padding: 8px 28px;
+  border-radius: 7px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.save-btn:hover {
+  background: #219150;
+}
+
+.profile-avatar-Edit {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #ffe066; /* yellow */
+  border: 3px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  overflow: visible;
+}
+
+.profile-avatar-Edit img {
+  width: 100%;   /* Use 100% to fill the circular container */
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: transparent;
+  border: none;
+}
+
+.edit-avatar-icon {
+  position: absolute;
+  bottom: 5px;   /* Move icon slightly inside */
+  right: 5px;    /* Move icon slightly inside */
+  background: #fff;
+  border-radius: 7px;
+  padding: 3px 5px;
+  font-size: 1.1rem;
+  border: 1.5px solid #888;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-avatar-icon:hover {
+  background: #e0e0e0;
+}
+
+.profile-avatar img {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  align-items: center;
+}
+
+@media screen and (max-width:768px) {
+  .profile-container{
+    margin-top: 25px;
+  }
+
+  .profile-modal {
+    width: 95%;
+    margin: 20px auto;
+    padding: 15px;
+    height: auto;
+    box-sizing: border-box;
+    height: 940px;
+  }
+
+  .profile-header {
+    width: 100%; /* Ensure header takes full width */
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-left: 80px;
+  }
+  
+  .profile-name {
+    font-size: 1.3rem;
+    margin: 0 0 0 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .form-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .form-row label {
+    text-align: left;
+    font-size: 0.95rem;
+  }
+
+  .form-row input {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 0.95rem;
+  }
+
+  .button-group {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .reset-btn,
+  .save-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+
+  .profile-avatar-Edit {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profile-avatar-Edit img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .edit-avatar-icon {
+    font-size: 1rem;
+    padding: 2px 4px;
+    bottom: 5px;
+    right: 5px;
+  }
+
+  .close-btn {
+    font-size: 24px;
+    top: 10px;
+    right: 10px;
+  }
+}
+

@@ -1,0 +1,373 @@
+.resource-wrapper {
+  /* padding: 2rem; */
+}
+
+.resource-table-container {
+  border: 1.5px solid #0099a8;
+  border-radius: 10px;
+  padding: 1.5rem;
+  background: #fff;
+  margin-top: 2rem;
+  overflow-x: auto;
+}
+
+.resource-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.resource-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.resource-count {
+  font-size: 1rem;
+  background: #eee;
+  border-radius: 50%;
+  padding: 0.2em 0.7em;
+  margin-left: 0.5em;
+}
+
+.resource-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Search Container and Input */
+.search-container {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 24px;
+  padding: 0 1em 0 0.7em;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.search-icon {
+  display: flex;
+  align-items: center;
+  margin-right: 0.5em;
+}
+
+.resource-search {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 1rem;
+  color: #979797;
+  width: 100px;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+  line-height: 40px;
+}
+
+.resource-search::placeholder {
+  color: #979797;
+  opacity: 1;
+}
+
+/* Create New Button */
+.resource-create-btn {
+  background: #0099a8;
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 0 1.5em;
+  font-weight: 500;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  height: 40px;
+  box-sizing: border-box;
+  line-height: 40px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.resource-create-btn:hover {
+  background: #007c8a;
+}
+
+.resource-table {
+  width: 100%;
+  margin-top: 1.5rem;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.resource-table th,
+.resource-table td {
+  padding: 0.7em 0.5em;
+  text-align: left;
+}
+
+.resource-table th {
+  color: #333;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.resource-table tr:not(:last-child) {
+  border-bottom: 1px solid #f3f3f3;
+}
+
+.resource-link {
+  color: #0099a8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.resource-edit {
+  color: #0099a8;
+  cursor: pointer;
+  margin-right: 0.7em;
+  font-size: 1.1em;
+}
+
+.resource-delete {
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 1.1em;
+}
+
+.resource-cards {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 30px;
+  justify-content: center;
+}
+
+.resource-card {
+  background: #09a7b1;
+  color: #fff;
+  border-radius: 16px;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.resource-card-members {
+  font-weight: bold;
+  font-size: 1.7rem;
+  margin-bottom: 0.5em;
+}
+
+.resource-card-name {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.resource-card.empty {
+  background: #09a7b1;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.resource-card-category {
+  font-size: 0.9rem;
+  margin-top: 0.2em;
+  opacity: 0.9;
+}
+
+.resource-edit svg,
+.resource-delete svg {
+  vertical-align: middle;
+  cursor: pointer;
+  margin-right: 0.7em;
+}
+
+.resource-delete svg {
+  margin-right: 0;
+}
+
+.resource-action-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.resource-members {
+  color: #979797;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.1%;
+}
+
+.resource-category {
+  color: #0099a8;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.1%;
+  text-decoration: none;
+}
+
+/* Form */
+.resource-form {
+  background: #f3f3f3;
+  border-radius: 16px;
+  padding: 1.5rem 1rem;
+  margin: 1.5rem 0 0 0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.resource-form label {
+  font-weight: 600;
+  color: #111;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.resource-form input {
+  border: none;
+  border-radius: 8px;
+  padding: 0.7em 1em;
+  font-size: 1rem;
+  background: #fff;
+  margin-top: 0.2em;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+/* Desktop only */
+.desktop-only {
+  display: block;
+}
+@media (max-width: 600px) {
+  .desktop-only {
+    display: none;
+  }
+}
+
+/* Mobile only */
+.mobile-only {
+  display: none;
+}
+@media (max-width: 600px) {
+  .mobile-only {
+    display: block;
+    padding: 1rem; /* Overall padding for the mobile view */
+  }
+
+  /* Mobile Top Header - Hamburger and Search */
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Space between hamburger and search */
+    width: 100%;
+    margin-bottom: 1.5rem; /* Space below the header */
+    padding-top: 0.5rem; /* Space from top of screen */
+  }
+
+  .mobile-hamburger-icon {
+    font-size: 1.8rem;
+    color: #333;
+    cursor: pointer;
+    margin-right: 1rem; /* Space between hamburger and search bar */
+    line-height: 1; /* Reset line-height */
+    height: 40px; /* Match search container height */
+    display: flex;
+    align-items: center; /* Vertically center the icon */
+  }
+
+  .search-container.mobile-search {
+    flex-grow: 1; /* Allow search bar to take available space */
+    /* Adjust max-width based on hamburger and its margin, ensuring it doesn't overflow */
+    max-width: calc(100% - 3.5rem); /* Example: 1.8rem for icon + 1rem margin + some buffer */
+    padding: 0 1em 0 0.7em; /* Vertical padding 0 */
+    height: 40px;
+    box-sizing: border-box;
+    /* Ensure no conflicting vertical-align here */
+  }
+
+  .resource-search {
+    width: 100%; /* Make search input fill its container */
+    line-height: 40px; /* Explicitly set line-height to container height for perfect vertical centering */
+    padding: 0; /* Ensure no extra padding */
+    /* Ensure no conflicting vertical-align here */
+  }
+
+  /* Resource Cards (Mobile) */
+  .resource-cards {
+    flex-direction: row; /* Keep them in a row */
+    justify-content: center; /* Center the cards horizontally */
+    gap: 0.8rem; /* Fine-tune gap for mobile cards */
+    margin-top: 0; /* No extra top margin here */
+    margin-bottom: 2rem; /* Space between cards and form */
+    flex-wrap: nowrap; /* Force cards into a single line */
+  }
+
+  .resource-card {
+    width: 70px; /* Smaller square cards for mobile, adjusted from 100px */
+    height: 70px; /* Adjusted height */
+    border-radius: 12px;
+    font-size: 0.8rem; /* Adjusted font size */
+    /* Hide the empty card for 3 cards view */
+    &.empty { /* This is a nested rule for SCSS/LESS, not standard CSS */
+      display: none;
+    }
+  }
+  .resource-card-members {
+    font-size: 1.1rem; /* Adjusted font size for mobile cards */
+  }
+  .resource-card-name {
+    font-size: 0.8rem; /* Adjusted font size for mobile cards */
+  }
+
+  /* Resource Form (Mobile) */
+  .resource-form {
+    width: 95%; /* Adjust width for mobile, keeping it a percentage */
+    max-width: 280px; /* Further reduced max-width for a shorter form */
+    margin: 0 auto; /* Center the form horizontally */
+    background: #f3f3f3;
+    border-radius: 16px;
+    padding: 1.5rem 1rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    gap: 1.2rem;
+    height: 350px;
+  }
+
+  .resource-form label:nth-child(2) input {
+    width: 80px; /* Make this specific input even shorter */
+  }
+
+  .resource-form input {
+    width: calc(100% - 20px); /* Make inputs slightly less than 100% to allow for padding, or adjust as needed */
+    /* Ensure any default horizontal padding on input is managed as well */
+  }
+
+  /* Create New Button (Mobile) */
+  .resource-create-btn {
+    margin: 1.5rem auto 0 auto; /* Center button with top margin */
+    display: block; /* Ensure it takes full width for centering */
+     text-align: center;
+
+  }
+
+  /* Ensure desktop header elements are completely hidden if they share names */
+  .resource-header { /* This is the desktop header, ensure it doesn't show */
+    display: none;
+  }
+  .resource-actions { /* This is the desktop actions, ensure it doesn't show */
+    display: none;
+  }
+}

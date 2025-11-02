@@ -1,0 +1,148 @@
+/* src/App.css */
+.profile-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-card {
+  background: #d9f3f7;
+  border: 4px solid #22c55e;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-avatar-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1.5rem;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 6px solid #fff;
+  background: #ded841;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  font-size: 3rem;
+  color: #1e40af;
+}
+
+.profile-name {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #111;
+  margin: 0;
+}
+
+.profile-details {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.profile-label {
+  font-weight: 600;
+  color: #111;
+  margin-left: 30px;
+}
+
+.profile-value {
+  color: #6b7280;
+  text-align: left;
+  margin-right: 100px;
+  align-items: self-start;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  background: #22c55e;
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 30px;
+}
+.edit-btn:hover {
+  background: #15803d;
+}
+.edit-btn .icon {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+}
+
+@media screen and (max-width:768px) {
+  .profile-container{
+    margin-top: 25px;
+  }
+  .profile-card{
+    padding: 1rem;
+    height: 550px;
+    width:300px;
+    border: none;
+  }
+  .profile-avatar-wrapper{
+    flex-direction: row;
+    margin-top: 20px;
+    gap: 1rem;
+    align-items: center;
+  }
+  .profile-avatar{
+    font-size: 3rem;
+  }
+  .profile-name{
+    font-size: 0.75rem;
+    margin-right: 150px;
+    text-align: center;
+    width: 60px;
+    font-weight: 250px;
+  }
+  .profile-details{
+    align-items: center;
+    gap: 1rem;
+  }
+  .profile-row{
+    flex-direction: column;
+   justify-items: center;
+    margin-left: 0;
+  }
+  .profile-label{
+    margin-left: 40px;
+    margin-bottom: 0.25rem;
+    justify-items: center;
+    margin-right: 40px;
+  }
+  .profile-value{
+    margin-right: 0;
+    text-align:center;
+    justify-content: center;
+  }
+  .edit-btn{
+    margin-top: 20px;
+    width: 75%;
+    justify-content: center;
+  }
+}
