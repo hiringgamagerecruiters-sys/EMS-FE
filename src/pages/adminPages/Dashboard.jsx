@@ -24,6 +24,7 @@ const Dashboard = () => {
     task_completion: 0,
     totalMembers: 0,
   });
+  const [url]=useState(BASE_URL);
   const [attendanceData, setAttendanceData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -130,6 +131,7 @@ const Dashboard = () => {
         setDashboardData(dashboardRes.data);
         setAttendanceData(attendanceRes.data);
         console.log("setAttendanceData:", attendanceRes.data);
+        console.log(url)
         setLoading(false);
       } catch (err) {
         console.error("Dashboard fetch error:", err);
