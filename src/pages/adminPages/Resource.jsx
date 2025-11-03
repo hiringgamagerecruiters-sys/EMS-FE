@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Eye, Search, Plus, X, User, Mail, Briefcase, Users, Check, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import axios from 'axios';
 import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router-dom';
+import api from "../../utils/api";
 
 const Resource = () => {
   const navigate = useNavigate();
@@ -67,8 +67,8 @@ const Resource = () => {
         return;
       }
 
-      const response = await axios.post(
-        "http://localhost:5000/api/admin/job-roles",
+      const response = await api.post(
+        "/admin/job-roles",
         { jobRoleName: newResource.name.trim() },
         { 
           headers: { Authorization: `Bearer ${token}` },
@@ -115,8 +115,8 @@ const Resource = () => {
         return false;
       }
 
-      const response = await axios.put(
-        `http://localhost:5000/api/admin/job-roles/${jobRoleId}`,
+      const response = await api.put(
+        `/admin/job-roles/${jobRoleId}`,
         { jobRoleName: newName },
         { 
           headers: { Authorization: `Bearer ${token}` },
@@ -162,8 +162,8 @@ const Resource = () => {
         return;
       }
 
-      const response = await axios.delete(
-        `http://localhost:5000/api/admin/job-roles/${jobRoleId}`,
+      const response = await api.delete(
+        `/admin/job-roles/${jobRoleId}`,
         { 
           headers: { Authorization: `Bearer ${token}` },
           validateStatus: (status) => status < 500
@@ -206,8 +206,8 @@ const Resource = () => {
         return;
       }
 
-      const response = await axios.post(
-        "http://localhost:5000/api/admin/teams",
+      const response = await api.post(
+        "/admin/teams",
         { teamName: newResource.name.trim() },
         { 
           headers: { Authorization: `Bearer ${token}` },
@@ -253,8 +253,8 @@ const Resource = () => {
         return false;
       }
 
-      const response = await axios.put(
-        `http://localhost:5000/api/admin/teams/${teamId}`,
+      const response = await api.put(
+        `/admin/teams/${teamId}`,
         { teamName: newName },
         { 
           headers: { Authorization: `Bearer ${token}` },
@@ -300,8 +300,8 @@ const Resource = () => {
         return;
       }
 
-      const response = await axios.delete(
-        `http://localhost:5000/api/admin/teams/${teamId}`,
+      const response = await api.delete(
+        `/admin/teams/${teamId}`,
         { 
           headers: { Authorization: `Bearer ${token}` },
           validateStatus: (status) => status < 500
@@ -333,7 +333,7 @@ const Resource = () => {
 
       try {
         const token = Cookies.get("token");
-        const response = await axios.get("http://localhost:5000/api/admin/teams", {
+        const response = await api.get("/admin/teams", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setTeams(response.data);
@@ -351,7 +351,7 @@ const Resource = () => {
 
       try {
         const token = Cookies.get("token");
-        const response = await axios.get("http://localhost:5000/api/admin/job-roles", {
+        const response = await api.get("/admin/job-roles", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setJobRoles(response.data);
@@ -372,8 +372,8 @@ const Resource = () => {
         return;
       }
 
-      const response = await axios.get(
-        `http://localhost:5000/api/admin/resourceItems/${resource.position}`,
+      const response = await api.get(
+        `/admin/resourceItems/${resource.position}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -400,8 +400,8 @@ const Resource = () => {
           return;
         }
 
-        const response = await axios.get(
-          "http://localhost:5000/api/admin/learning_resource",
+        const response = await api.get(
+          "/admin/learning_resource",
           { headers: { Authorization: `Bearer ${token}` } }
         );
 

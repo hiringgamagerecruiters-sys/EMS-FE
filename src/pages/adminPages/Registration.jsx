@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { UserPlus, Upload, X, Check, Eye, EyeOff, Users } from "lucide-react";
-import axios from "axios";
-
+import api from "../../utils/api";
 function Registration() {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -34,7 +33,7 @@ function Registration() {
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/admin/teams");
+        const response = await api.get("/admin/teams");
         setTeams(response.data);
       } catch (error) {
         console.error("Failed to fetch teams:", error);
@@ -47,7 +46,7 @@ function Registration() {
   useEffect(() => {
     const fetchJobRoles = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/admin/job-roles");
+        const response = await api.get("/admin/job-roles");
         setJobRoles(response.data);
       } catch (error) {
         console.error("Failed to fetch job roles:", error);
@@ -135,8 +134,8 @@ function Registration() {
     });
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
+      const response = await api.post(
+        "/auth/register",
         data,
         {
           headers: { "Content-Type": "multipart/form-data" },

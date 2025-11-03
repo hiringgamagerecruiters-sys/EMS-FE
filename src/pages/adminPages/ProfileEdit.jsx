@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Cookies from "js-cookie";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { IoSettingsSharp } from "react-icons/io5";
 import { IoIosCloseCircleOutline } from "react-icons/io";
+import api from "../../utils/api";
 
 function ProfileEdit() {
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ function ProfileEdit() {
     const fetchTeams = async () => {
       setLoadingTeams(true);
       try {
-        const response = await axios.get("http://localhost:5000/api/admin/teams");
+        const response = await api.get("/admin/teams");
         setTeams(response.data);
       } catch (error) {
         console.error("Failed to fetch teams:", error);
@@ -66,7 +66,7 @@ function ProfileEdit() {
     const fetchJobRoles = async () => {
       setLoadingJobRoles(true);
       try {
-        const response = await axios.get("http://localhost:5000/api/admin/job-roles");
+        const response = await api.get("/admin/job-roles");
         setJobRoles(response.data);
       } catch (error) {
         console.error("Failed to fetch job roles:", error);
@@ -88,7 +88,7 @@ function ProfileEdit() {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/employee/profile", {
+        const res = await api.get("/employee/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -188,8 +188,8 @@ function ProfileEdit() {
       const formData = new FormData();
       formData.append("avatar", file);
 
-      const res = await axios.post(
-        "http://localhost:5000/api/employee/upload-avatar",
+      const res = await api.post(
+        "/employee/upload-avatar",
         formData,
         {
           headers: {
@@ -243,8 +243,8 @@ function ProfileEdit() {
         payload.role = profileForm.role;
       }
 
-      await axios.put(
-        "http://localhost:5000/api/employee/profile",
+      await api.put(
+        "/employee/profile",
         payload,
         {
           headers: {
@@ -274,8 +274,8 @@ function ProfileEdit() {
     }
 
     try {
-      await axios.put(
-        "http://localhost:5000/api/employee/profile",
+      await api.put(
+        "/employee/profile",
         {
           password: profileForm.password,
           newPassword: passwordForm.newPassword

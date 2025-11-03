@@ -118,7 +118,6 @@ const Dashboard = () => {
           return;
         }
 
-        // ✅ Use your preconfigured Axios instance for both requests
         const [dashboardRes, attendanceRes] = await Promise.all([
           api.get("/admin/dashboard", {
             headers: { Authorization: `Bearer ${token}` },

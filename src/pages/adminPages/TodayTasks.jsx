@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import TaskCard from '../../components/Task.componets/TaskCards';
+import api from '../../utils/api';
 
 function TodayTasks() {
   const [tasks, setTasks] = useState([]);
@@ -18,8 +18,8 @@ function TodayTasks() {
         return;
       }
 
-      const response = await axios.get(
-        "http://localhost:5000/api/admin/today_tasks",
+      const response = await api.get(
+        "/admin/today_tasks",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

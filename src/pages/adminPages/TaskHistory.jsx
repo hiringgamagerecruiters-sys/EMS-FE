@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { FaFilePdf } from "react-icons/fa";
 import { FaExternalLinkAlt } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 import Swal from "sweetalert2";
+import api from "../../utils/api";
 
 function TaskHistory() {
   
@@ -26,8 +26,8 @@ function TaskHistory() {
           return;
         }
 
-        const response = await axios.get(
-          "http://localhost:5000/api/admin/tasks_history",
+        const response = await api.get(
+          "/admin/tasks_history",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -58,7 +58,7 @@ function TaskHistory() {
   
         if (result.isConfirmed) {
           const token = Cookies.get("token");
-          await axios.delete(`http://localhost:5000/api/admin/remove_task`, {
+          await api.delete(`/admin/remove_task`, {
             params: { id },
             headers: {
               Authorization: `Bearer ${token}`,

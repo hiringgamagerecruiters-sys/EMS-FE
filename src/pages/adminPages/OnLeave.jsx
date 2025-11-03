@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext } from "react";
 import { MainContext } from "../../context/MainContext";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { FaEye, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { Tooltip } from "antd";
 import UserData from "../../components/ui/viewUser/userData";
 const token = Cookies.get("token");
+import api from "../../utils/api";
 
 const OnLeaveTable = () => {
   const { date } = useContext(MainContext);
@@ -18,8 +18,8 @@ const OnLeaveTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/admin/leave/leaveByDay?date=${date}`,
+        const response = await api.get(
+          `/admin/leave/leaveByDay?date=${date}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

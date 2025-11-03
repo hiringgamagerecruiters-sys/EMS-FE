@@ -7,6 +7,8 @@ import {
   FaGithub,
 } from "react-icons/fa";
 import defaultProfileImage from "../../../assets/demo.jpg"
+const BASE_URL = import.meta.env.VITE_API_URL_;
+
 
 const SenderDetails = ({ internData, onClose }) => {
   if (!internData) return null;
@@ -39,7 +41,7 @@ const SenderDetails = ({ internData, onClose }) => {
                 {internData?.userId?.profileImage ? (
                   <img
                     className="w-full h-full object-cover"
-                    src={`http://localhost:5000/uploads/${internData.userId.profileImage}`}
+                    src={`${BASE_URL}/uploads/${internData.userId.profileImage}`}
                     alt={`${internData.userId.firstName || ""} ${
                       internData.userId.lastName || ""
                     }`}

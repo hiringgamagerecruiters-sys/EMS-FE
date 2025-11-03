@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { FiEye } from "react-icons/fi";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { IoIosCloseCircleOutline } from "react-icons/io";
@@ -11,6 +10,7 @@ import defaultProfileImage from "../../assets/demo.jpg";
 import { FaFilePdf } from "react-icons/fa6";
 import { FaExternalLinkAlt, FaSearch } from "react-icons/fa";
 import { Tooltip } from "antd";
+import api from "../../utils/api";
 
 const SubmitDiaries = () => {
   const navigate = useNavigate();
@@ -89,8 +89,8 @@ const SubmitDiaries = () => {
           return;
         }
 
-        const response = await axios.get(
-          "http://localhost:5000/api/admin/diaries",
+        const response = await api.get(
+          "/admin/diaries",
           {
             headers: { Authorization: `Bearer ${token}` },
           }

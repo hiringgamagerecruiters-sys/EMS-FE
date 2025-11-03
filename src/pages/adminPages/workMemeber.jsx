@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
 import { FaSearch } from "react-icons/fa";
+import api from "../../utils/api";
 
 function WorkMembers() {
   const [members, setMembers] = useState([]);
@@ -15,8 +15,8 @@ function WorkMembers() {
     const fetchMembers = async () => {
       try {
         const token = Cookies.get("token");
-        const res = await axios.get(
-          "http://localhost:5000/api/admin/all_active_users",
+        const res = await api.get(
+          "/admin/all_active_users",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -64,8 +64,8 @@ const handleStatusUpdate = async (userId, currentStatus) => {
         );
 
         const token = Cookies.get("token");
-        await axios.put(
-          "http://localhost:5000/api/admin/update_user_status",
+        await api.put(
+          "/admin/update_user_status",
           { userId, status: newStatus },
           {
             headers: {

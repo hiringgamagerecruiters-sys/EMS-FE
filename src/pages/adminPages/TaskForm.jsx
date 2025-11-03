@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import Cookies from "js-cookie";
-import axios from "axios";
 import { MdAssignment } from "react-icons/md";
 import Swal from "sweetalert2";
+import api from "../../utils/api";
 
 const token = Cookies.get("token");
 
@@ -23,7 +23,7 @@ const CreateTaskForm = ({ onCreate = () => {} }) => {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/admin/all_active_users", {
+        const res = await api.get("/admin/all_active_users", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEmployees(res.data);
@@ -78,7 +78,7 @@ const CreateTaskForm = ({ onCreate = () => {} }) => {
         }
       });
 
-      await axios.post("http://localhost:5000/api/admin/create_tasks", data, {
+      await api.post("/admin/create_tasks", data, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

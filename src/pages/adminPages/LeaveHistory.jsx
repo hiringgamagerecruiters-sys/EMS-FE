@@ -6,6 +6,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { Tooltip } from "antd";
 import UserData from "../../components/ui/viewUser/userData";
+import api from "../../utils/api";
 
 const LeaveHistoryTable = () => {
   const { date } = useContext(MainContext);
@@ -22,8 +23,8 @@ const LeaveHistoryTable = () => {
     try {
       const token = Cookies.get("token");
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/admin/leaves/history?date=${date}`,
+      const response = await api.get(
+        `/admin/leaves/history?date=${date}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -45,7 +46,7 @@ const LeaveHistoryTable = () => {
     try {
       const token = Cookies.get("token");
       await axios.put(
-        `http://localhost:5000/api/admin/leaves/remove?id=${id}`,
+        `/admin/leaves/remove?id=${id}`,
         {},
         {
           headers: {

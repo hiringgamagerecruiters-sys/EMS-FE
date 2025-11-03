@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { FiEye } from "react-icons/fi";
-import axios from "axios";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +12,9 @@ import defaultProfileImage from "../../assets/demo.jpg";
 import { FaFilePdf } from "react-icons/fa6";
 import { FaExternalLinkAlt, FaSearch } from "react-icons/fa";
 import { Tooltip } from "antd";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
+
 
 const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
   const navigate = useNavigate();
@@ -101,10 +103,10 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
       }
 
       const endpoint = isHistory 
-        ? "http://localhost:5000/api/admin/diaries_history"
-        : "http://localhost:5000/api/admin/diaries";
+        ? "/admin/diaries_history"
+        : "/admin/diaries";
 
-      const response = await axios.get(endpoint, {
+      const response = await api.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -142,7 +144,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
 
       if (result.isConfirmed) {
         const token = Cookies.get("token");
-        await axios.delete(`http://localhost:5000/api/admin/remove_diarie`, {
+        await api.delete(`/api/admin/remove_diarie`, {
           params: { id },
           headers: {
             Authorization: `Bearer ${token}`,
@@ -173,8 +175,8 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
       });
 
       if (result.isConfirmed) {
-        await axios.put(
-          `http://localhost:5000/api/admin/diaries/update?id=${id}&status=${status}`,
+        await api.put(
+          `/admin/diaries/update?id=${id}&status=${status}`,
           { status },
           {
             headers: {
@@ -284,7 +286,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                     <img
                       src={
                         diary.userId?.profileImage
-                          ? `http://localhost:5000/uploads/${diary.userId.profileImage}`
+                          ? `${BASE_URL}/uploads/${diary.userId.profileImage}`
                           : defaultProfileImage
                       }
                       alt={`${diary.userId?.firstName || "User"} profile`}
@@ -424,7 +426,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                 <img
                   src={
                     diary.userId?.profileImage
-                      ? `http://localhost:5000/uploads/${diary.userId.profileImage}`
+                      ? `${BASE_URL}/uploads/${diary.userId.profileImage}`
                       : defaultProfileImage
                   }
                   alt={`${diary.userId?.firstName || "User"} profile`}
@@ -531,7 +533,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                   <img
                     src={
                       selectedIntern.userId?.profileImage
-                        ? `http://localhost:5000/uploads/${selectedIntern.userId.profileImage}`
+                        ? `${BASE_URL}/uploads/${selectedIntern.userId.profileImage}`
                         : defaultProfileImage
                     }
                     alt={`${
@@ -577,7 +579,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                     )}
                     {selectedIntern.filePath && (
                       <a
-                        href={`http://localhost:5000/${selectedIntern.filePath}`}
+                        href={`${BASE_URL}/${selectedIntern.filePath}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title="Open PDF file"

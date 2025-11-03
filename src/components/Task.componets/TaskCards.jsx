@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { FaFilePdf, FaTrash, FaCheck } from "react-icons/fa";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "../../utils/api";
 
-const token = Cookies.get("token");
+
 
 const TaskCard = ({ task, onDelete, onSubmit, refreshTasks , showSubmitButton }) => {
   const getStatusColor = () => {
@@ -24,15 +24,13 @@ const TaskCard = ({ task, onDelete, onSubmit, refreshTasks , showSubmitButton })
   const cardId = task._id;
 
   try {
-    await axios.put(
-      `http://localhost:5000/api/admin/update_tasks_staus?id=${cardId}&status=${status}`,
-      { status },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+ await api.put(`/admin/update_tasks_staus`, null, {
+  params: {
+    id: cardId,
+    status: status,
+  },
+});
+
 
     if (typeof refreshTasks === "function") {
       refreshTasks(); // ✅ trigger refresh

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { MdClose } from 'react-icons/md'; 
 import { FiUpload } from 'react-icons/fi'; 
-import axios from 'axios';
 import Cookies from 'js-cookie';
 import Swal from 'sweetalert2';
+import api from '../../../utils/api';
 
 /**
  * Reply component for sending messages to an intern.
@@ -51,8 +51,8 @@ const Reply = ({ internName, onClose, diaryId }) => {
                 formData.append('file', selectedFile);
             }
 
-            const response = await axios.put(
-                `http://localhost:5000/api/admin/diaries/update?id=${diaryId}&status=Replied`,
+            const response = await api.put(
+                `/admin/diaries/update?id=${diaryId}&status=Replied`,
                 formData,
                 {
                     headers: {

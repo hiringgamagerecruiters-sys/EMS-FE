@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
+import api from "../../utils/api";
 
 function CreateNotification() {
   const [title, setTitle] = useState("");
@@ -21,8 +21,8 @@ function CreateNotification() {
         return;
       }
 
-      const response = await axios.get(
-        "http://localhost:5000/api/admin/notifications",
+      const response = await api.get(
+        "/admin/notifications",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -53,8 +53,8 @@ function CreateNotification() {
         return;
       }
 
-      const response = await axios.post(
-        "http://localhost:5000/api/admin/notifications/send",
+      const response = await api.post(
+        "/admin/notifications/send",
         { title, message },
         { headers: { Authorization: `Bearer ${token}` } }
       );

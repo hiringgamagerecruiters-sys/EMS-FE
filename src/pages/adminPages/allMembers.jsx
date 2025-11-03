@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
 import { MdDeleteForever } from "react-icons/md";
 import { FaSearch } from "react-icons/fa";
+import api from "../../utils/api";
 
 function AllMembers() {
   const [members, setMembers] = useState([]);
@@ -16,8 +16,8 @@ function AllMembers() {
     const fetchMembers = async () => {
       try {
         const token = Cookies.get("token");
-        const res = await axios.get(
-          "http://localhost:5000/api/admin/all_users",
+        const res = await api.get(
+          "/admin/all_users",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -65,8 +65,8 @@ function AllMembers() {
         );
 
         const token = Cookies.get("token");
-        await axios.put(
-          "http://localhost:5000/api/admin/update_user_status",
+        await api.put(
+          "/admin/update_user_status",
           { userId, status: newStatus },
           {
             headers: {
@@ -112,7 +112,7 @@ function AllMembers() {
 
       if (result.isConfirmed) {
         const token = Cookies.get("token");
-        await axios.delete(`http://localhost:5000/api/admin/remove_user`, {
+        await api.delete(`/api/admin/remove_user`, {
           params: { id },
           headers: {
             Authorization: `Bearer ${token}`,

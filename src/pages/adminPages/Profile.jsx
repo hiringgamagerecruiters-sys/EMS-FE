@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "../../utils/api";
 
 function Profile() {
   const navigate = useNavigate();
@@ -29,7 +29,7 @@ function Profile() {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/admin/profile", {
+        const res = await api.get("/admin/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
 

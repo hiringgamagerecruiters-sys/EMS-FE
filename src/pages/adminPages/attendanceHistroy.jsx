@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { MainContext } from "../../context/MainContext";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import api from "../../utils/api";
 
 function AttendanceSheetHistory() {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -26,8 +26,8 @@ function AttendanceSheetHistory() {
       }
 
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/admin/attendance_history_sheet`,
+      const response = await api.get(
+        `/admin/attendance_history_sheet`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

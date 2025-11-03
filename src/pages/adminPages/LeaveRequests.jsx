@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from "react";
 import { MainContext } from "../../context/MainContext";
 import { FaCheck, FaTimes, FaUndo, FaEye, FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import axios from "axios";
 import Cookies from "js-cookie";
 import UserData from "../../components/ui/viewUser/userData";
 import { Tooltip } from "antd";
+import api from "../../utils/api";
 
 const token = Cookies.get("token");
 
@@ -19,8 +19,8 @@ const LeaveRequestsTable = () => {
 
   const fetchLeaveHistory = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/admin/leaves/pending?date=${date}`,
+      const response = await api.get(
+        `/admin/leaves/pending?date=${date}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -35,8 +35,8 @@ const LeaveRequestsTable = () => {
 
   const handleStatusChange = async (id, status) => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/admin/leaves/update?id=${id}&status=${status}`,
+      await api.put(
+        `/admin/leaves/update?id=${id}&status=${status}`,
         { status },
         {
           headers: {
