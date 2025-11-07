@@ -6,6 +6,8 @@ import { FaExternalLinkAlt } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
 import Swal from "sweetalert2";
 import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
+
 
 function TaskHistory() {
   
@@ -168,7 +170,7 @@ function TaskHistory() {
                       )}
                       {task.submitFile && (
                         <a
-                          href={`http://localhost:5000/${task.submitFile}`}
+                          href={`${BASE_URL}/${task.submitFile}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Open PDF file"
