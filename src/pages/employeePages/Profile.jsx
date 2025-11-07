@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function Profile() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ function Profile() {
           return;
         }
 
-        const res = await axios.get("http://localhost:5000/api/employee/profile", {
+        const res = await api.get("/employee/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
 

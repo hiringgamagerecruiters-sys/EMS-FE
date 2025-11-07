@@ -8,8 +8,9 @@ import {
   FaExternalLinkAlt,
 } from "react-icons/fa";
 import TaskIMG from "../../assets/taskimage.jpg";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 const token = Cookies.get("token");
 
@@ -69,8 +70,8 @@ const TaskDetail = () => {
     }
 
     try {
-      const response = await axios.put(
-        "http://localhost:5000/api/employee/task/submit_tasks",
+      const response = await api.put(
+        "/employee/task/submit_tasks",
         form,
         {
           headers: {
@@ -102,8 +103,8 @@ const TaskDetail = () => {
   
   const handleAccept = async (id, status) => {
     try {
-      await axios.put(
-       `http://localhost:5000/api/employee/task/accept_tasks?id=${id}&status=${status}`,
+      await api.put(
+       `/employee/task/accept_tasks?id=${id}&status=${status}`,
         { status },
         {
           headers: {

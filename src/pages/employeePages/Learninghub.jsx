@@ -3,9 +3,10 @@ import { FaSearch } from "react-icons/fa";
 import { CiMemoPad } from "react-icons/ci";
 import { GoCheckCircle, GoDownload } from "react-icons/go";
 import Cookies from "js-cookie";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import defaultImage from "../../assets/defaultImage.jpg";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function Learninghub() {
   const navigate = useNavigate();
@@ -17,8 +18,8 @@ function Learninghub() {
 
   const fetchCourses = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:5000/api/employee/all_courses",
+      const response = await api.get(
+        "/employee/all_courses",
         {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -40,17 +41,17 @@ function Learninghub() {
   const getImageUrl = (course) => {
     if (course.courseImage) {
       if (course.courseImage.includes('uploads')) {
-        return `http://localhost:5000/${course.courseImage}`;
+        return `${BASE_URL}/${course.courseImage}`;
       }
-      return `http://localhost:5000/uploads/${course.courseImage}`;
+      return `${BASE_URL}/uploads/${course.courseImage}`;
     }
     
     if (course.image) {
-      return `http://localhost:5000/uploads/${course.image}`;
+      return `${BASE_URL}/uploads/${course.image}`;
     }
     
     if (course.thumbnail) {
-      return `http://localhost:5000/uploads/${course.thumbnail}`;
+      return `${BASE_URL}/uploads/${course.thumbnail}`;
     }
     
     return defaultImage;

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { FaFilePdf, FaExternalLinkAlt, FaHistory, FaCalendarAlt, FaInfoCircle } from 'react-icons/fa';
 import { FiClock, FiFileText } from 'react-icons/fi';
 import { ImSpinner8 } from 'react-icons/im';
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function TaskHistory() {
   const [tasks, setTasks] = useState([]);
@@ -21,8 +22,8 @@ function TaskHistory() {
           return;
         }
 
-        const response = await axios.get(
-          "http://localhost:5000/api/employee/all_tasks",
+        const response = await api.get(
+          "/employee/all_tasks",
           {
             headers: { Authorization: `Bearer ${token}` },
           }

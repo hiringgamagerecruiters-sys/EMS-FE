@@ -4,8 +4,9 @@ import AttendanceModel from "../../components/attendancePopUp";
 import { MainContext } from "../../context/MainContext";
 import { useNavigate } from 'react-router-dom';
 import Cookies from "js-cookie";
-import axios from "axios";
 import AttendancedPopUp from "../../components/attendancePopUp";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -68,8 +69,8 @@ function Dashboard() {
 
       console.log("Sending attendance data:", payload);
 
-      const response = await axios.post(
-        "http://localhost:5000/api/employee/attendance",
+      const response = await api.post(
+        "/employee/attendance",
         payload,
         {
           headers: {
@@ -106,7 +107,7 @@ function Dashboard() {
       return;
     }
 
-    const attendanceStatusResponse = await axios.get('http://localhost:5000/api/employee/is_attendance', {
+    const attendanceStatusResponse = await api.get('/employee/is_attendance', {
       params: { date: date },
       headers: {
         Authorization: `Bearer ${token}`,
@@ -151,7 +152,7 @@ function Dashboard() {
         navigate('/login');
         return;
       }
-      const historyResponse = await axios.get('http://localhost:5000/api/employee/attendance/history', {
+      const historyResponse = await api.get('/employee/attendance/history', {
         headers: {
           Authorization: `Bearer ${token}`,
         },

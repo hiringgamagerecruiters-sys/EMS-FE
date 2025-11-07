@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 import {
   FiUploadCloud,
   FiCalendar,
@@ -37,8 +38,8 @@ function DairySubmit() {
     try {
       const id = Cookies.get("id");
       const token = Cookies.get("token");
-      const response = await axios.get(
-        `http://localhost:5000/api/employee/diaries/${id}`,
+      const response = await api.get(
+        `/employee/diaries/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -74,8 +75,8 @@ function DairySubmit() {
       });
 
       if (response.isConfirmed) {
-        await axios.delete(
-          `http://localhost:5000/api/employee/diaries/${id}`,
+        await api.delete(
+          `/employee/diaries/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -176,8 +177,8 @@ function DairySubmit() {
         return;
       }
 
-      const response = await axios.post(
-        "http://localhost:5000/api/employee/diary",
+      const response = await api.post(
+        "/employee/diary",
         data,
         {
           headers: {

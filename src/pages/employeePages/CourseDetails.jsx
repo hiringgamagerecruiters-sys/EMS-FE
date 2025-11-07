@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { FiArrowLeft } from "react-icons/fi";
 import { FaCheckCircle } from "react-icons/fa";
 import defaultImage from "../../assets/defaultImage.jpg";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function CourseDetails() {
   const { id } = useParams();
@@ -19,8 +20,8 @@ function CourseDetails() {
       try {
         setLoading(true);
         setError(null);
-        const response = await axios.get(
-          `http://localhost:5000/api/employee/course/${id}`,
+        const response = await api.get(
+          `/employee/course/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

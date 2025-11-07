@@ -10,9 +10,10 @@ import {
   FaChevronRight,
   FaChevronLeft,
 } from "react-icons/fa";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function TaskManagement() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ function TaskManagement() {
         return;
       }
 
-      const res = await axios.get("http://localhost:5000/api/employee/tasks", {
+      const res = await api.get("/employee/tasks", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

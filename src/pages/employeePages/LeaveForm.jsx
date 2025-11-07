@@ -1,6 +1,8 @@
 import { useState } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
+
 
 const LeaveForm = () => {
 
@@ -29,8 +31,8 @@ const LeaveForm = () => {
         return;
       }
 
-      const response = await axios.post(
-        "http://localhost:5000/api/employee/leave",
+      const response = await api.post(
+        "/employee/leave",
         form,
         {
           headers: {
