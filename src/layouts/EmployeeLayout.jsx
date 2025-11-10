@@ -4,8 +4,8 @@ import { Outlet, useNavigate } from "react-router-dom";
 import Logo from "../assets/logo.png";
 import { FaBars, FaRegBell } from "react-icons/fa";
 import { CgProfile } from "react-icons/cg";
-import axios from "axios";
 import Cookies from "js-cookie";
+import api from "./../utils/api";
 
 function EmployeeLayout() {
   const navigate = useNavigate();
@@ -20,8 +20,8 @@ function EmployeeLayout() {
       const token = Cookies.get("token");
       if (!token) return;
 
-      const response = await axios.get(
-        "http://localhost:5000/api/employee/my-notifications",
+      const response = await api.get(
+        "/employee/my-notifications",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

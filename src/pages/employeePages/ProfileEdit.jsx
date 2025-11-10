@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { IoIosCloseCircleOutline } from "react-icons/io";
 import { IoSettingsSharp } from "react-icons/io5";
 import api from "../../utils/api";
-const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function ProfileEdit() {
   const navigate = useNavigate();
@@ -34,7 +33,7 @@ function ProfileEdit() {
     team: "",
     addressLine1: "",
     addressLine2: "",
-    password: "" // current password for verification
+    password: ""
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -42,6 +41,138 @@ function ProfileEdit() {
     newPassword: "",
     confirmPassword: ""
   });
+
+  // Validation rules
+  const validationRules = {
+    firstName: (value) => {
+      if (!value || value.trim() === "") return "First name is required";
+      if (!/^[A-Za-z\s]{2,50}$/.test(value)) return "First name must be 2-50 letters";
+      return null;
+    },
+    lastName: (value) => {
+      if (!value || value.trim() === "") return "Last name is required";
+      if (!/^[A-Za-z\s]{2,50}$/.test(value)) return "Last name must be 2-50 letters";
+      return null;
+    },
+    email: (value) => {
+      if (!value || value.trim() === "") return "Email is required";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Invalid email format";
+      return null;
+    },
+    contact: (value) => {
+      if (!value || value.trim() === "") return "Contact number is required";
+      const contactPattern = /^(?:\+94|0)?[1-9]\d{8}$/;
+      if (!contactPattern.test(value.replace(/\s/g, ''))) {
+        return "Invalid Sri Lankan phone number (e.g., 0771234567 or +94771234567)";
+      }
+      return null;
+    },
+    nic: (value) => {
+      if (!value || value.trim() === "") return "NIC is required";
+      const cleanNIC = value.trim().toUpperCase();
+      const oldNICPattern = /^[0-9]{9}[VX]$/;
+      const newNICPattern = /^[0-9]{12}$/;
+      
+      if (!oldNICPattern.test(cleanNIC) && !newNICPattern.test(cleanNIC)) {
+        return "Invalid NIC format. Use 901234567V or 199901234567";
+      }
+      return null;
+    },
+    dob: (value) => {
+      if (!value) return "Date of Birth is required";
+      const dob = new Date(value);
+      const today = new Date();
+      const minAge = new Date();
+      minAge.setFullYear(today.getFullYear() - 100);
+      const maxAge = new Date();
+      maxAge.setFullYear(today.getFullYear() - 16);
+      
+      if (dob > maxAge) return "Must be at least 16 years old";
+      if (dob < minAge) return "Invalid date of birth";
+      return null;
+    },
+    internshipStartDate: (value, allData) => {
+      if (!value) return "Intern start date is required";
+      const startDate = new Date(value);
+      const today = new Date();
+      
+      if (startDate > today) {
+        return "Start date cannot be in the future";
+      }
+      
+      if (allData.internshipEndDate) {
+        const endDate = new Date(allData.internshipEndDate);
+        if (startDate >= endDate) {
+          return "Start date must be before end date";
+        }
+      }
+      return null;
+    },
+    internshipEndDate: (value, allData) => {
+      if (!value) return "Intern end date is required";
+      const endDate = new Date(value);
+      const today = new Date();
+      
+      if (endDate < today) {
+        return "End date cannot be in the past";
+      }
+      
+      if (allData.internshipStartDate) {
+        const startDate = new Date(allData.internshipStartDate);
+        if (endDate <= startDate) {
+          return "End date must be after start date";
+        }
+      }
+      return null;
+    },
+    university: (value) => {
+      if (!value || value.trim() === "") return "University is required";
+      if (value.length < 2) return "University name is too short";
+      return null;
+    },
+    addressLine1: (value) => {
+      if (!value || value.trim() === "") return "Address Line 1 is required";
+      if (value.length < 5) return "Address is too short";
+      return null;
+    }
+  };
+
+  const requiredFields = ['firstName', 'lastName', 'email', 'contact', 'dob', 'nic', 'internshipStartDate', 'internshipEndDate', 'university', 'addressLine1'];
+
+  // Real-time validation
+  const validateField = (name, value) => {
+    // Required field validation
+    if (requiredFields.includes(name) && (!value || value.trim() === '')) {
+      return "This field is required";
+    }
+
+    const rule = validationRules[name];
+    if (rule) {
+      return rule(value, profileForm);
+    }
+    return null;
+  };
+
+  // Comprehensive form validation
+  const validateProfileForm = () => {
+    const newErrors = {};
+    
+    requiredFields.forEach(field => {
+      if (!profileForm[field] || profileForm[field].trim() === '') {
+        newErrors[field] = "This field is required";
+      }
+    });
+
+    Object.keys(validationRules).forEach(field => {
+      const error = validationRules[field](profileForm[field], profileForm);
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -118,7 +249,15 @@ function ProfileEdit() {
 
   const handleProfileChange = (e) => {
     const { id, value } = e.target;
-    setProfileForm({ ...profileForm, [id]: value });
+    const updatedForm = { ...profileForm, [id]: value };
+    setProfileForm(updatedForm);
+
+    // Real-time validation
+    const error = validateField(id, value);
+    setErrors(prev => ({
+      ...prev,
+      [id]: error
+    }));
   };
 
   const handlePasswordChange = (e) => {
@@ -162,6 +301,14 @@ function ProfileEdit() {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    
+    // Validate form before submission
+    if (!validateProfileForm()) {
+      alert("Please fix the validation errors before submitting.");
+      setSubmitting(false);
+      return;
+    }
+
     const token = Cookies.get("token");
     if (!token) return navigate("/login");
 
@@ -232,6 +379,21 @@ function ProfileEdit() {
       console.error(err);
       alert(err.response?.data?.msg || "Failed to change password.");
     }
+  };
+
+  // Calculate max/min dates for date inputs
+  const getMaxDOB = () => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - 16);
+    return date.toISOString().split('T')[0];
+  };
+
+  const getMaxStartDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  const getMinEndDate = () => {
+    return profileForm.internshipStartDate || new Date().toISOString().split('T')[0];
   };
 
   return (
@@ -308,17 +470,29 @@ function ProfileEdit() {
           ].map(({ id, label, type }) => (
             <div key={id} className="space-y-1">
               <label htmlFor={id} className="block text-sm font-medium text-gray-700">
-                {label}
+                {label} {requiredFields.includes(id) && <span className="text-red-500">*</span>}
               </label>
               <input
                 id={id}
                 type={type}
                 value={profileForm[id]}
                 readOnly={editableField !== id}
-                className={`w-full px-3 py-2 border rounded-md ${editableField !== id ? 'bg-gray-50 cursor-pointer' : 'bg-white'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                className={`w-full px-3 py-2 border rounded-md ${
+                  errors[id] ? 'border-red-500' : 'border-gray-300'
+                } ${editableField !== id ? 'bg-gray-50 cursor-pointer' : 'bg-white'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 onClick={() => handleInputClick(id)}
                 onChange={handleProfileChange}
+                // Add date restrictions
+                {...(id === "dob" && { max: getMaxDOB() })}
+                {...(id === "internshipStartDate" && { max: getMaxStartDate() })}
+                {...(id === "internshipEndDate" && { min: getMinEndDate() })}
               />
+              {errors[id] && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <span>⚠</span>
+                  {errors[id]}
+                </p>
+              )}
             </div>
           ))}
 
@@ -376,7 +550,7 @@ function ProfileEdit() {
 
           <div className="md:col-span-2 space-y-1">
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Current Password (for verification)
+              Current Password (for verification) *
             </label>
             <input
               id="password"
@@ -386,6 +560,9 @@ function ProfileEdit() {
               onChange={handleProfileChange}
               required
             />
+            {!profileForm.password && (
+              <p className="text-red-500 text-sm mt-1">Current password is required for verification</p>
+            )}
           </div>
 
           <div className="md:col-span-2 flex justify-end space-x-4 mt-4">
