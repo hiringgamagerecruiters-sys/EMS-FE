@@ -24,7 +24,7 @@ const Dashboard = () => {
     task_completion: 0,
     totalMembers: 0,
   });
-  const [url]=useState(BASE_URL);
+  const [url] = useState(BASE_URL);
   const [attendanceData, setAttendanceData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,15 +70,29 @@ const Dashboard = () => {
     },
   ];
 
-  // Filter attendance based on search term
+  // Fixed search functionality
   const filteredTasks = attendanceData.filter((attendance) => {
-    const fullName = `${attendance.userId?.firstName || ""} ${
-      attendance.userId?.lastName || ""
-    }`.toLowerCase();
-    const employeeId = attendance.userId?._id || "";
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    // Check multiple possible fields for name
+    const firstName = attendance.userId?.firstName || attendance.firstName || "";
+    const lastName = attendance.userId?.lastName || attendance.lastName || "";
+    const fullName = `${firstName} ${lastName}`.toLowerCase();
+    
+    // Check multiple possible fields for ID
+    const employeeId = attendance.userId?._id || attendance.userId?.employeeId || attendance.employeeId || attendance._id || "";
+    
+    // Also check email if available
+    const email = attendance.userId?.email || attendance.email || "";
+
     return (
-      fullName.includes(searchTerm.toLowerCase()) ||
-      employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+      fullName.includes(searchLower) ||
+      employeeId.toLowerCase().includes(searchLower) ||
+      email.toLowerCase().includes(searchLower) ||
+      firstName.toLowerCase().includes(searchLower) ||
+      lastName.toLowerCase().includes(searchLower)
     );
   });
 
@@ -94,8 +108,11 @@ const Dashboard = () => {
   };
 
   const getStatusColor = (status) => {
+    if (!status) return "bg-gray-100 text-gray-800";
+    
     switch (status.toLowerCase()) {
       case "attended":
+      case "present":
         return "bg-green-100 text-green-800";
       case "late":
         return "bg-yellow-100 text-yellow-800";
@@ -108,7 +125,29 @@ const Dashboard = () => {
     }
   };
 
- useEffect(() => {
+  // Helper function to safely get user data
+  const getUserData = (attendance) => {
+    // If userId exists and has data, use it, otherwise use attendance directly
+    if (attendance.userId && (attendance.userId.firstName || attendance.userId._id)) {
+      return {
+        firstName: attendance.userId.firstName,
+        lastName: attendance.userId.lastName,
+        employeeId: attendance.userId._id,
+        profileImage: attendance.userId.profileImage,
+        email: attendance.userId.email
+      };
+    } else {
+      return {
+        firstName: attendance.firstName,
+        lastName: attendance.lastName,
+        employeeId: attendance.employeeId || attendance._id,
+        profileImage: attendance.profileImage,
+        email: attendance.email
+      };
+    }
+  };
+
+  useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const token = Cookies.get("token");
@@ -130,8 +169,9 @@ const Dashboard = () => {
 
         setDashboardData(dashboardRes.data);
         setAttendanceData(attendanceRes.data);
-        console.log("setAttendanceData:", attendanceRes.data);
-        console.log(url)
+        console.log("Dashboard Data:", dashboardRes.data);
+        console.log("Attendance Data:", attendanceRes.data); // Check the actual structure
+        console.log("URL:", url);
         setLoading(false);
       } catch (err) {
         console.error("Dashboard fetch error:", err);
@@ -157,7 +197,21 @@ const Dashboard = () => {
       return timeString;
     }
 
-    return "Invalid Time Format";
+    // If it's a full ISO date string, extract time
+    if (typeof timeString === "string" && timeString.includes('T')) {
+      try {
+        const date = new Date(timeString);
+        return date.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      } catch (e) {
+        return "Invalid Time";
+      }
+    }
+
+    return "N/A";
   };
 
   if (loading) {
@@ -182,16 +236,23 @@ const Dashboard = () => {
             </div>
             <input
               type="text"
-              placeholder="Search by name or ID..."
+              placeholder="Search by name, ID, or email..."
               className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1);
+                setCurrentPage(1); // Reset to first page when searching
               }}
             />
           </div>
         </div>
+        
+        {/* Search results info */}
+        {searchTerm && (
+          <div className="mt-2 text-sm text-gray-600">
+            Found {filteredTasks.length} results for "{searchTerm}"
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 mb-8">
@@ -213,6 +274,11 @@ const Dashboard = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">
             Today's Attendance
+            {searchTerm && (
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                {/* (Filtered) */}
+              </span>
+            )}
           </h2>
         </div>
 
@@ -238,21 +304,80 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentTasks.map((attendance, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+              {currentTasks.length > 0 ? (
+                currentTasks.map((attendance, i) => {
+                  const user = getUserData(attendance);
+                  return (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
+                            {user.profileImage ? (
+                              <img
+                                src={`${BASE_URL}/uploads/${user.profileImage}`}
+                                alt={`${user.firstName || "User"} profile`}
+                                className="w-10 h-10 rounded-full object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = defaultProfileImage;
+                                }}
+                              />
+                            ) : (
+                              <FaUser className="h-full w-full text-gray-400 p-2" />
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {user.employeeId || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span>{formatTimeDisplay(attendance.time)}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                            attendance.status
+                          )}`}
+                        >
+                          {attendance.status ? 
+                            attendance.status.charAt(0).toUpperCase() +
+                            attendance.status.slice(1).toLowerCase()
+                            : "Unknown"
+                          }
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                    {searchTerm ? "No matching records found" : "No attendance records available"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile view */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {currentTasks.length > 0 ? (
+            currentTasks.map((attendance, i) => {
+              const user = getUserData(attendance);
+              return (
+                <div key={i} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden">
-                        {attendance.userId?.profileImage ? (
+                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
+                        {user.profileImage ? (
                           <img
-                            src={
-                              attendance.userId?.profileImage
-                                ? `${BASE_URL}/uploads/${attendance.userId.profileImage}`
-                                : defaultProfileImage
-                            }
-                            alt={`${
-                              attendance.userId?.firstName || "User"
-                            } profile`}
+                            src={`${BASE_URL}/uploads/${user.profileImage}`}
+                            alt={`${user.firstName || "User"} profile`}
                             className="w-10 h-10 rounded-full object-cover"
                             onError={(e) => {
                               e.target.onerror = null;
@@ -263,83 +388,38 @@ const Dashboard = () => {
                           <FaUser className="h-full w-full text-gray-400 p-2" />
                         )}
                       </div>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {user.employeeId || "N/A"}
+                        </div>
+                      </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {attendance.userId?._id || "N/A"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {attendance.userId?.firstName} {attendance.userId?.lastName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span>{formatTimeDisplay(attendance.time)}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
                         attendance.status
                       )}`}
                     >
-                      {attendance.status.charAt(0).toUpperCase() +
-                        attendance.status.slice(1).toLowerCase()}
+                      {attendance.status ? 
+                        attendance.status.charAt(0).toUpperCase() +
+                        attendance.status.slice(1).toLowerCase()
+                        : "Unknown"
+                      }
                     </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="md:hidden divide-y divide-gray-200">
-          {currentTasks.map((attendance, i) => (
-            <div key={i} className="p-4 hover:bg-gray-50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 overflow-hidden mr-3">
-                    {attendance.userId?.profileImage ? (
-                      <img
-                        src={
-                          attendance.userId?.profileImage
-                            ? `${BASE_URL}/uploads/${attendance.userId.profileImage}`
-                            : defaultProfileImage
-                        }
-                        alt={`${
-                          attendance.userId?.firstName || "User"
-                        } profile`}
-                        className="w-10 h-10 rounded-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = defaultProfileImage;
-                        }}
-                      />
-                    ) : (
-                      <FaUser className="h-full w-full text-gray-400 p-2" />
-                    )}
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      {attendance.userId?.firstName}{" "}
-                      {attendance.userId?.lastName}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {attendance.userId?._id || "N/A"}
-                    </div>
+                  <div className="flex justify-between text-sm text-gray-900">
+                    <span>Check-in: {formatTimeDisplay(attendance.time)}</span>
                   </div>
                 </div>
-                <span
-                  className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                    attendance.status
-                  )}`}
-                >
-                  {attendance.status.charAt(0).toUpperCase() +
-                    attendance.status.slice(1).toLowerCase()}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-900">
-                <span>Check-in: {formatTimeDisplay(attendance.time)}</span>
-              </div>
+              );
+            })
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              {searchTerm ? "No matching records found" : "No attendance records available"}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -353,6 +433,9 @@ const Dashboard = () => {
             </span>{" "}
             of <span className="font-medium">{filteredTasks.length}</span>{" "}
             results
+            {searchTerm && (
+              <span className="ml-2">for "{searchTerm}"</span>
+            )}
           </div>
           <div className="flex space-x-2">
             <button
