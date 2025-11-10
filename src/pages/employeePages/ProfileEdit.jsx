@@ -174,6 +174,35 @@ function ProfileEdit() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Enhanced password validation for BUG016
+  const validatePasswordForm = () => {
+    const newErrors = {};
+    
+    // Validate current password length (minimum 6 characters)
+    if (!profileForm.password || profileForm.password.length < 6) {
+      newErrors.currentPassword = "Current password must be at least 6 characters";
+    }
+    
+    // Validate new password
+    if (!passwordForm.newPassword) {
+      newErrors.newPassword = "New password is required";
+    } else if (passwordForm.newPassword.length < 6) {
+      newErrors.newPassword = "New password must be at least 6 characters";
+    } else if (passwordForm.newPassword === profileForm.password) {
+      newErrors.newPassword = "New password must be different from current password";
+    }
+    
+    // Validate password confirmation
+    if (!passwordForm.confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your new password";
+    } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   useEffect(() => {
     const fetchTeams = async () => {
       setLoadingTeams(true);
@@ -221,10 +250,10 @@ function ProfileEdit() {
           lastName: data.lastName || "",
           email: data.email || "",
           contact: data.contactNumber || "",
-          dob: data.dob?.slice(0, 10) || "",
+          dob: data.dob ? data.dob.split('T')[0] : "",
           nic: data.nic || "",
-          internshipStartDate: data.internStartDate?.slice(0, 10) || "",
-          internshipEndDate: data.internEndDate?.slice(0, 10) || "",
+          internshipStartDate: data.internStartDate ? data.internStartDate.split('T')[0] : "",
+          internshipEndDate: data.internEndDate ? data.internEndDate.split('T')[0] : "",
           university: data.university || "",
           jobRole: data.jobRole?._id || "",
           team: data.team?._id || "",
@@ -263,6 +292,11 @@ function ProfileEdit() {
   const handlePasswordChange = (e) => {
     const { id, value } = e.target;
     setPasswordForm({ ...passwordForm, [id]: value });
+    
+    // Clear password errors when user starts typing
+    if (errors[id]) {
+      setErrors(prev => ({ ...prev, [id]: null }));
+    }
   };
 
   const handleInputClick = (field) => setEditableField(field);
@@ -343,41 +377,57 @@ function ProfileEdit() {
     }
   };
 
-  const validatePasswordForm = () => {
-    const newErrors = {};
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-    }
-    if (passwordForm.newPassword.length < 6) {
-      newErrors.newPassword = "Password must be at least 6 characters";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    if (!validatePasswordForm()) return;
+    
+    if (!validatePasswordForm()) {
+      alert("Please fix the validation errors before changing your password.");
+      return;
+    }
 
     const token = Cookies.get("token");
-    if (!token) return navigate("/login");
+    if (!token) {
+      alert("Session expired. Please log in again.");
+      navigate("/login");
+      return;
+    }
 
     try {
-      await api.put(
+      setSubmitting(true);
+      
+      const response = await api.put(
         "/employee/profile",
         {
           password: profileForm.password,
           newPassword: passwordForm.newPassword
         },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { 
+          headers: { Authorization: `Bearer ${token}` } 
+        }
       );
 
       alert("Password changed successfully!");
-      setPasswordForm({ email: passwordForm.email, newPassword: "", confirmPassword: "" });
+      
+      // Reset forms
+      setPasswordForm({ 
+        email: passwordForm.email, 
+        newPassword: "", 
+        confirmPassword: "" 
+      });
       setProfileForm({ ...profileForm, password: "" });
+      setErrors({});
+      
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.msg || "Failed to change password.");
+      console.error("Password change error:", err);
+      if (err.response?.status === 400) {
+        alert(err.response.data.msg || "Failed to change password. Please check your current password.");
+      } else if (err.response?.status === 401) {
+        alert("Current password is incorrect.");
+      } else {
+        alert("Failed to change password. Please try again.");
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -556,12 +606,20 @@ function ProfileEdit() {
               id="password"
               type="password"
               value={profileForm.password}
-              className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.currentPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
               onChange={handleProfileChange}
               required
             />
-            {!profileForm.password && (
-              <p className="text-red-500 text-sm mt-1">Current password is required for verification</p>
+            {errors.currentPassword && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <span>⚠</span>
+                {errors.currentPassword}
+              </p>
+            )}
+            {!profileForm.password && !errors.currentPassword && (
+              <p className="text-gray-500 text-sm mt-1">Current password is required for verification</p>
             )}
           </div>
 
@@ -578,25 +636,107 @@ function ProfileEdit() {
         </form>
       ) : (
         <form onSubmit={handlePasswordSubmit} className="grid grid-cols-1 gap-6">
-          {["email","newPassword","confirmPassword"].map(id => (
-            <div key={id} className="space-y-1">
-              <label htmlFor={id} className="block text-sm font-medium text-gray-700">
-                {id === "newPassword" ? "New Password" : 
-                 id === "confirmPassword" ? "Confirm Password" : "Email"}
-              </label>
-              <input
-                id={id}
-                type={id.includes("Password") ? "password" : "email"}
-                value={passwordForm[id]}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                onChange={handlePasswordChange}
-                required
-              />
-              {errors[id] && <p className="text-red-500 text-sm">{errors[id]}</p>}
-            </div>
-          ))}
+          {/* Current Password Field */}
+          <div className="space-y-1">
+            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+              Current Password *
+            </label>
+            <input
+              id="currentPassword"
+              type="password"
+              value={profileForm.password}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.currentPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              onChange={(e) => {
+                setProfileForm({ ...profileForm, password: e.target.value });
+                // Clear error when user starts typing
+                if (errors.currentPassword) {
+                  setErrors({ ...errors, currentPassword: null });
+                }
+              }}
+              required
+            />
+            {errors.currentPassword && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <span>⚠</span>
+                {errors.currentPassword}
+              </p>
+            )}
+          </div>
+
+          {/* Email Field */}
+          <div className="space-y-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={passwordForm.email}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              onChange={handlePasswordChange}
+              required
+            />
+          </div>
+
+          {/* New Password Field */}
+          <div className="space-y-1">
+            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+              New Password *
+            </label>
+            <input
+              id="newPassword"
+              type="password"
+              value={passwordForm.newPassword}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.newPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              onChange={handlePasswordChange}
+              required
+            />
+            {errors.newPassword && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <span>⚠</span>
+                {errors.newPassword}
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Password must be at least 6 characters long and different from current password
+            </p>
+          </div>
+
+          {/* Confirm Password Field */}
+          <div className="space-y-1">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              Confirm New Password *
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={passwordForm.confirmPassword}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              onChange={handlePasswordChange}
+              required
+            />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <span>⚠</span>
+                {errors.confirmPassword}
+              </p>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-4 mt-4">
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Change Password</button>
+            <button 
+              type="submit" 
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting}
+            >
+              {submitting ? "Changing..." : "Change Password"}
+            </button>
           </div>
         </form>
       )}
