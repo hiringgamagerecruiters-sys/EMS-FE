@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
+import api from "../../utils/api";
+const BASE_URL = import.meta.env.VITE_API_URL_;
 
 function NotificationCenter() {
   const [notifications, setNotifications] = useState([]);
@@ -17,8 +18,8 @@ function NotificationCenter() {
         return;
       }
 
-      const response = await axios.get(
-        "http://localhost:5000/api/employee/my-notifications",
+      const response = await api.get(
+        "/employee/my-notifications",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -39,8 +40,8 @@ function NotificationCenter() {
   const markAsRead = async (id) => {
     try {
       const token = Cookies.get("token");
-      await axios.put(
-        `http://localhost:5000/api/employee/my-notifications/${id}/read`,
+      await api.put(
+        `/employee/my-notifications/${id}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
