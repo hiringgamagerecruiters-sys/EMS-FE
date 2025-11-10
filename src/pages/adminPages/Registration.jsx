@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { UserPlus, Upload, X, Check, Eye, EyeOff, Users } from "lucide-react";
 import api from "../../utils/api";
+
 function Registration() {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -24,6 +25,8 @@ function Registration() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const fileInputRef = useRef(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teams, setTeams] = useState([]);
@@ -58,6 +61,10 @@ function Registration() {
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
 
+    // Clear any previous messages
+    setApiError("");
+    setSuccessMessage("");
+
     if (name === "team") {
       const selectedTeam = teams.find((team) => team._id === value) || null;
       setFormData({ ...formData, team: selectedTeam });
@@ -88,32 +95,78 @@ function Registration() {
     });
   };
 
+  // Enhanced validation with date comparison and password strength
   const validateForm = () => {
     const newErrors = {};
 
+    // Required field validations
     if (!formData.firstName) newErrors.firstName = "First name is required";
     if (!formData.lastName) newErrors.lastName = "Last name is required";
+    
     if (!formData.email) {
       newErrors.email = "Email is required";
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
       newErrors.email = "Email is invalid";
     }
+    
     if (!formData.contactNumber) {
       newErrors.contactNumber = "Contact number is required";
     } else if (!/^[0-9]{10}$/.test(formData.contactNumber)) {
-      newErrors.contactNumber = "Invalid contact number";
+      newErrors.contactNumber = "Invalid contact number (must be 10 digits)";
     }
+    
     if (!formData.nic) newErrors.nic = "NIC is required";
     if (!formData.dob) newErrors.dob = "Date of birth is required";
     if (!formData.role) newErrors.role = "Role is required";
     if (!formData.jobRole) newErrors.jobRole = "Job role is required";
-    if (!formData.internStartDate) newErrors.internStartDate = "Start date is required";
-    if (!formData.internEndDate) newErrors.internEndDate = "End date is required";
-    if (!formData.password) newErrors.password = "Password is required";
     if (!formData.university) newErrors.university = "University is required";
     if (!formData.team) newErrors.team = "Team selection is required";
     if (!formData.addressLine1) newErrors.addressLine1 = "Address Line 1 is required";
     if (!formData.addressLine2) newErrors.addressLine2 = "Address Line 2 is required";
+
+    // Date validations
+    if (!formData.internStartDate) {
+      newErrors.internStartDate = "Start date is required";
+    }
+    
+    if (!formData.internEndDate) {
+      newErrors.internEndDate = "End date is required";
+    } else if (formData.internStartDate && formData.internEndDate) {
+      const startDate = new Date(formData.internStartDate);
+      const endDate = new Date(formData.internEndDate);
+      
+      if (endDate < startDate) {
+        newErrors.internEndDate = "End date must be after start date";
+      }
+    }
+
+    // Password validations
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else {
+      if (formData.password.length < 6) {
+        newErrors.password = "Password must be at least 6 characters long";
+      } else if (formData.password.length > 20) {
+        newErrors.password = "Password must be less than 20 characters";
+      } else if (!/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password)) {
+        newErrors.password = "Password must contain both uppercase and lowercase letters";
+      } else if (!/(?=.*\d)/.test(formData.password)) {
+        newErrors.password = "Password must contain at least one number";
+      } else if (!/(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/.test(formData.password)) {
+        newErrors.password = "Password must contain at least one special character";
+      }
+    }
+
+    // Date of birth validation
+    if (formData.dob) {
+      const dob = new Date(formData.dob);
+      const today = new Date();
+      const minAgeDate = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
+      
+      if (dob > minAgeDate) {
+        newErrors.dob = "Must be at least 16 years old";
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -121,19 +174,28 @@ function Registration() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    
+    // Clear previous messages
+    setApiError("");
+    setSuccessMessage("");
+    
+    if (!validateForm()) {
+      setApiError("Please fix the validation errors above");
+      return;
+    }
 
     setIsSubmitting(true);
-    const data = new FormData();
-    Object.keys(formData).forEach((key) => {
-      if (key === "jobRole" || key === "team") {
-        data.append(key, formData[key]?._id || "");
-      } else if (formData[key] !== null) {
-        data.append(key, formData[key]);
-      }
-    });
 
     try {
+      const data = new FormData();
+      Object.keys(formData).forEach((key) => {
+        if (key === "jobRole" || key === "team") {
+          data.append(key, formData[key]?._id || "");
+        } else if (formData[key] !== null) {
+          data.append(key, formData[key]);
+        }
+      });
+
       const response = await api.post(
         "/auth/register",
         data,
@@ -141,11 +203,57 @@ function Registration() {
           headers: { "Content-Type": "multipart/form-data" },
         }
       );
+      
       console.log("Registration successful:", response.data);
-      alert("Intern successfully registered!");
+      setSuccessMessage("Intern successfully registered!");
+      
+      // Clear form after successful registration
+      setTimeout(() => {
+        handleClearForm();
+      }, 2000);
+      
     } catch (error) {
-      console.error("Registration failed:", error.response?.data || error.message);
-      alert(error.response?.data?.message || "Registration failed. Please try again.");
+      console.error("Registration failed:", error);
+      
+      // Enhanced error handling with specific messages
+      let errorMessage = "Registration failed. Please try again.";
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 400:
+            if (data.message?.includes("email") || data.message?.includes("Email")) {
+              errorMessage = "This email address is already registered. Please use a different email.";
+            } else if (data.message?.includes("NIC") || data.message?.includes("nic")) {
+              errorMessage = "This NIC number is already registered.";
+            } else if (data.message) {
+              errorMessage = data.message;
+            } else {
+              errorMessage = "Invalid data provided. Please check all fields.";
+            }
+            break;
+          case 409:
+            errorMessage = "This user already exists (email or NIC may be duplicate).";
+            break;
+          case 422:
+            errorMessage = "Validation error. Please check all required fields.";
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            if (data.message) {
+              errorMessage = data.message;
+            }
+        }
+      } else if (error.request) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else {
+        errorMessage = "An unexpected error occurred. Please try again.";
+      }
+      
+      setApiError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -172,6 +280,44 @@ function Registration() {
       profileImage: null,
     });
     setErrors({});
+    setApiError("");
+    setSuccessMessage("");
+  };
+
+  // Password strength indicator
+  const getPasswordStrength = () => {
+    if (!formData.password) return null;
+    
+    let strength = 0;
+    if (formData.password.length >= 6) strength++;
+    if (/(?=.*[a-z])(?=.*[A-Z])/.test(formData.password)) strength++;
+    if (/(?=.*\d)/.test(formData.password)) strength++;
+    if (/(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/.test(formData.password)) strength++;
+    
+    const strengthLabels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
+    const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
+    
+    return (
+      <div className="mt-2">
+        <div className="flex space-x-1 mb-1">
+          {[1, 2, 3, 4, 5].map((index) => (
+            <div
+              key={index}
+              className={`h-1 flex-1 rounded-full ${
+                index <= strength ? strengthColors[strength - 1] : "bg-gray-200"
+              }`}
+            />
+          ))}
+        </div>
+        <p className={`text-xs ${
+          strength <= 2 ? "text-red-600" : 
+          strength === 3 ? "text-yellow-600" : 
+          "text-green-600"
+        }`}>
+          Password strength: {strengthLabels[strength]}
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -185,6 +331,25 @@ function Registration() {
           </h2>
           <p className="text-slate-600 mt-2">Fill in the details to onboard a new intern.</p>
         </div>
+
+        {/* Success and Error Messages */}
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+            <div className="flex items-center">
+              <Check className="text-green-500 mr-2" size={20} />
+              {successMessage}
+            </div>
+          </div>
+        )}
+
+        {apiError && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <div className="flex items-center">
+              <X className="text-red-500 mr-2" size={20} />
+              {apiError}
+            </div>
+          </div>
+        )}
 
         <form
           onSubmit={handleRegister}
@@ -483,6 +648,10 @@ function Registration() {
                   </button>
                 </div>
                 {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                {getPasswordStrength()}
+                <div className="text-xs text-gray-600 mt-1">
+                  Password must be 6-20 characters with uppercase, lowercase, number, and special character.
+                </div>
               </div>
 
               <div className="flex items-center justify-start md:justify-center gap-4 pt-8">
