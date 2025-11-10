@@ -171,7 +171,7 @@ const Dashboard = () => {
         setDashboardData(dashboardRes.data);
         setAttendanceData(attendanceRes.data);
         console.log("Dashboard Data:", dashboardRes.data);
-        console.log("Attendance Data:", attendanceRes.data); // Check the actual structure
+        console.log("Attendance Data:", attendanceRes.data);
         console.log("URL:", url);
         setLoading(false);
       } catch (err) {
@@ -185,7 +185,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [navigate]);
+  }, [navigate, url]);
 
   const formatTimeDisplay = (timeString) => {
     if (!timeString) return "N/A";
@@ -218,7 +218,7 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center flex-col gap-5 min-h-screen">
-        <div className="animate-spin rounded-full h-20 w-20 border-8 border-dotted  border-t-red-500 border-r-blue-500 border-b-red-500 border-l-green-500 "></div>
+        <div className="animate-spin rounded-full h-20 w-20 border-8 border-dotted border-t-red-500 border-r-blue-500 border-b-red-500 border-l-green-500"></div>
         <p className="text-2xl text-blue-900">Loading .... </p>
       </div>
     );
@@ -231,7 +231,7 @@ const Dashboard = () => {
           Employee Dashboard
         </h1>
         <div className="w-full flex justify-end">
-          <div className="relative w-md">
+          <div className="relative w-full md:w-96">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaSearch className="text-gray-400" />
             </div>
@@ -242,7 +242,7 @@ const Dashboard = () => {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when searching
+                setCurrentPage(1);
               }}
             />
           </div>
@@ -275,11 +275,6 @@ const Dashboard = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800">
             Today's Attendance
-            {searchTerm && (
-              <span className="text-sm font-normal text-gray-600 ml-2">
-                {/* (Filtered) */}
-              </span>
-            )}
           </h2>
         </div>
 
