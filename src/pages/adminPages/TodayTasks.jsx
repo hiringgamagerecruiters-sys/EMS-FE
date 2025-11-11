@@ -21,7 +21,7 @@ function TodayTasks({ refreshTrigger = 0 }) {
         return;
       }
 
-      console.log("Fetching today's tasks...");
+      console.log("🔄 Fetching today's tasks...");
       
       const response = await api.get(
         "/admin/today_tasks",
@@ -30,10 +30,32 @@ function TodayTasks({ refreshTrigger = 0 }) {
         }
       );
 
-      console.log("Today's tasks response:", response.data);
-      setTasks(Array.isArray(response.data) ? response.data : []);
+      console.log("✅ Today's tasks response:", response.data);
+      
+      if (Array.isArray(response.data)) {
+        setTasks(response.data);
+        console.log(`📊 Loaded ${response.data.length} tasks`);
+        
+        // Debug: Log each task
+        response.data.forEach((task, index) => {
+          const taskDate = task.deadline ? new Date(task.deadline) : null;
+          const isToday = taskDate && 
+            taskDate.toDateString() === new Date().toDateString();
+          
+          console.log(`Task ${index + 1}:`, {
+            name: task.name,
+            deadline: task.deadline,
+            isToday: isToday,
+            status: task.status,
+            assignedTo: task.assignedTo?.email,
+          });
+        });
+      } else {
+        console.warn("⚠️ Response data is not an array:", response.data);
+        setTasks([]);
+      }
     } catch (err) {
-      console.error("Error fetching today's tasks:", err);
+      console.error("❌ Error fetching today's tasks:", err);
       
       if (err.response?.status === 404) {
         setError("Today's tasks endpoint not found. Please contact administrator.");
@@ -63,11 +85,24 @@ function TodayTasks({ refreshTrigger = 0 }) {
     task.assignedTo?.lastName?.toLowerCase().includes(searchQuery)
   );
 
+  // Categorize tasks for better display
+  const tasksDueToday = filteredTasks.filter(task => {
+    if (!task.deadline) return false;
+    const taskDate = new Date(task.deadline);
+    return taskDate.toDateString() === new Date().toDateString();
+  });
+
+  const upcomingTasks = filteredTasks.filter(task => {
+    if (!task.deadline) return false;
+    const taskDate = new Date(task.deadline);
+    return taskDate > new Date();
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-3 text-gray-600">Loading today's tasks...</span>
+        <span className="ml-3 text-gray-600">Loading tasks...</span>
       </div>
     );
   }
@@ -75,15 +110,22 @@ function TodayTasks({ refreshTrigger = 0 }) {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">
-          Today's Tasks ({filteredTasks.length})
-        </h2>
-        <button
-          onClick={fetchTodayTasks}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm transition-colors"
-        >
-          Refresh
-        </button>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Active Tasks ({filteredTasks.length})
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {tasksDueToday.length} due today • {upcomingTasks.length} upcoming
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={fetchTodayTasks}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Error Display */}
@@ -116,28 +158,91 @@ function TodayTasks({ refreshTrigger = 0 }) {
       </div>
 
       {filteredTasks.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredTasks.map(task => (
-            <TaskCard 
-              key={task._id} 
-              task={task}
-              refreshTasks={fetchTodayTasks}
-            />
-          ))}
+        <div>
+          {/* Tasks Due Today Section */}
+          {tasksDueToday.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-green-700 mb-4 flex items-center">
+                <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                Due Today ({tasksDueToday.length})
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {tasksDueToday.map(task => (
+                  <TaskCard 
+                    key={task._id} 
+                    task={task}
+                    refreshTasks={fetchTodayTasks}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Upcoming Tasks Section */}
+          {upcomingTasks.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-blue-700 mb-4 flex items-center">
+                <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                Upcoming Tasks ({upcomingTasks.length})
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {upcomingTasks.map(task => (
+                  <TaskCard 
+                    key={task._id} 
+                    task={task}
+                    refreshTasks={fetchTodayTasks}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Other Active Tasks */}
+          {filteredTasks.length > tasksDueToday.length + upcomingTasks.length && (
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">
+                Other Active Tasks ({filteredTasks.length - tasksDueToday.length - upcomingTasks.length})
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredTasks
+                  .filter(task => {
+                    if (!task.deadline) return true;
+                    const taskDate = new Date(task.deadline);
+                    return taskDate.toDateString() !== new Date().toDateString() && 
+                           taskDate <= new Date();
+                  })
+                  .map(task => (
+                    <TaskCard 
+                      key={task._id} 
+                      task={task}
+                      refreshTasks={fetchTodayTasks}
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <div className="text-gray-400 text-6xl mb-4">📋</div>
           <h3 className="text-xl font-semibold text-gray-600 mb-2">
-            {error ? 'Error Loading Tasks' : 'No tasks scheduled for today'}
+            {error ? 'Error Loading Tasks' : 'No active tasks found'}
           </h3>
-          <p className="text-gray-500">
+          <p className="text-gray-500 mb-4">
             {error 
               ? error 
-              : tasks.length === 0 
-                ? "No tasks have been assigned for today." 
-                : "No tasks match your search criteria."}
+              : "There are no active tasks assigned to users."}
           </p>
+          
+          <div className="max-w-md mx-auto text-sm text-gray-600 bg-white p-4 rounded-lg border text-left">
+            <p className="font-medium mb-2">What this section shows:</p>
+            <ul className="space-y-1">
+              <li>• Tasks with status: Assigned, Progress, or Pending</li>
+              <li>• Tasks due today OR created recently</li>
+              <li>• Tasks assigned to active users</li>
+            </ul>
+          </div>
+          
           {error && (
             <button
               onClick={fetchTodayTasks}
