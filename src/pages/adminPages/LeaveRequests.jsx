@@ -16,6 +16,9 @@ const LeaveRequestsTable = () => {
   const [selectedSender, setSelectedSender] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchLeaveHistory = async () => {
     try {
@@ -33,11 +36,16 @@ const LeaveRequestsTable = () => {
     }
   };
 
-  const handleStatusChange = async (id, status) => {
+  const handleStatusChange = async (id, status, reason = "") => {
     try {
+      const payload = { status };
+      if (reason) {
+        payload.rejectionReason = reason;
+      }
+      
       await api.put(
         `/admin/leaves/update?id=${id}&status=${status}`,
-        { status },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -45,9 +53,41 @@ const LeaveRequestsTable = () => {
         }
       );
       fetchLeaveHistory();
+      
+      // Show success message
+      if (status === "Approved") {
+        alert("Leave request approved successfully!");
+      } else if (status === "Rejected") {
+        alert("Leave request rejected successfully!");
+      }
     } catch (error) {
       console.error(`Failed to update status:`, error);
+      alert("Failed to update leave status. Please try again.");
     }
+  };
+
+  const handleRejectClick = (leave) => {
+    setSelectedLeave(leave);
+    setRejectionReason("");
+    setShowRejectModal(true);
+  };
+
+  const confirmRejection = () => {
+    if (!rejectionReason.trim()) {
+      alert("Please provide a reason for rejection.");
+      return;
+    }
+    
+    handleStatusChange(selectedLeave._id, "Rejected", rejectionReason.trim());
+    setShowRejectModal(false);
+    setSelectedLeave(null);
+    setRejectionReason("");
+  };
+
+  const cancelRejection = () => {
+    setShowRejectModal(false);
+    setSelectedLeave(null);
+    setRejectionReason("");
   };
 
   useEffect(() => {
@@ -201,9 +241,7 @@ const LeaveRequestsTable = () => {
                           <FaCheck />
                         </button>
                         <button
-                          onClick={() =>
-                            handleStatusChange(item._id, "Rejected")
-                          }
+                          onClick={() => handleRejectClick(item)}
                           className="p-2 text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full"
                           title="Reject"
                         >
@@ -295,6 +333,52 @@ const LeaveRequestsTable = () => {
               >
                 <FaChevronRight className="h-4 w-4" />
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {showRejectModal && selectedLeave && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">
+                Reject Leave Request
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">
+                You are about to reject the leave request for{" "}
+                <strong>
+                  {selectedLeave.userId?.firstName} {selectedLeave.userId?.lastName}
+                </strong>
+                .
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Please provide a reason for rejection:
+              </p>
+              
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                autoFocus
+              />
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={cancelRejection}
+                  className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmRejection}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Confirm Rejection
+                </button>
+              </div>
             </div>
           </div>
         </div>

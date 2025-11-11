@@ -5,8 +5,6 @@ import { FiCalendar, FiClock, FiCheck, FiX, FiClock as FiPending } from "react-i
 
 const LeaveForm = () => {
   const [form, setForm] = useState({
-    name: "",
-    email: "",
     leaveDate: "",
     endDate: "",
     reason: "",
@@ -14,6 +12,7 @@ const LeaveForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [leaveHistory, setLeaveHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [error, setError] = useState("");
 
   // BUG022: Character limit for reason field
   const MAX_REASON_LENGTH = 255;
@@ -22,8 +21,12 @@ const LeaveForm = () => {
   const fetchLeaveHistory = async () => {
     try {
       setLoadingHistory(true);
+      setError("");
       const token = Cookies.get("token");
-      if (!token) return;
+      if (!token) {
+        setError("Please log in first.");
+        return;
+      }
 
       const response = await api.get("/employee/leave/history", {
         headers: {
@@ -39,6 +42,11 @@ const LeaveForm = () => {
       }
     } catch (error) {
       console.error("Error fetching leave history:", error);
+      if (error.response?.status === 404) {
+        setError("Leave history endpoint not found. Please contact administrator.");
+      } else {
+        setError("Failed to load leave history. Please try again.");
+      }
     } finally {
       setLoadingHistory(false);
     }
@@ -62,10 +70,24 @@ const LeaveForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError("");
 
     // BUG022: Validate reason length before submission
     if (form.reason.length > MAX_REASON_LENGTH) {
-      alert(`Reason cannot exceed ${MAX_REASON_LENGTH} characters.`);
+      setError(`Reason cannot exceed ${MAX_REASON_LENGTH} characters.`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate dates
+    if (!form.leaveDate || !form.endDate) {
+      setError("Please select both start and end dates.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (new Date(form.endDate) < new Date(form.leaveDate)) {
+      setError("End date cannot be before start date.");
       setIsSubmitting(false);
       return;
     }
@@ -73,7 +95,7 @@ const LeaveForm = () => {
     try {
       const token = Cookies.get("token");
       if (!token) {
-        alert("Please log in first.");
+        setError("Please log in first.");
         setIsSubmitting(false);
         return;
       }
@@ -89,14 +111,14 @@ const LeaveForm = () => {
         }
       );
 
-      alert(response.data.msg || "Leave request submitted successfully!");
-      setForm({ name: "", email: "", leaveDate: "", endDate: "", reason: "" });
+      alert(response.data.message || "Leave request submitted successfully!");
+      setForm({ leaveDate: "", endDate: "", reason: "" });
       
       // Refresh leave history after successful submission
       fetchLeaveHistory();
     } catch (error) {
       console.error("Leave request error:", error.response?.data || error.message);
-      alert(error.response?.data?.msg || "Failed to submit leave request.");
+      setError(error.response?.data?.message || "Failed to submit leave request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -148,6 +170,20 @@ const LeaveForm = () => {
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <FiX className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Leave Application Form - Takes 2/3 on large screens */}
           <div className="lg:col-span-2">
@@ -158,39 +194,9 @@ const LeaveForm = () => {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required 
-                      className="w-full px-4 py-3 rounded-md border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition duration-200 ease-in-out"
-                      placeholder="John Doe"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      className="w-full px-4 py-3 rounded-md border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition duration-200 ease-in-out"
-                      placeholder="your.email@example.com"
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Date
+                      Start Date *
                     </label>
                     <input
                       type="date"
@@ -205,7 +211,7 @@ const LeaveForm = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date
+                      End Date *
                     </label>
                     <input
                       type="date"
@@ -220,7 +226,7 @@ const LeaveForm = () => {
 
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Reason for Leave
+                      Reason for Leave *
                       <span className="text-gray-500 text-sm font-normal ml-1">
                         (Max {MAX_REASON_LENGTH} characters)
                       </span>

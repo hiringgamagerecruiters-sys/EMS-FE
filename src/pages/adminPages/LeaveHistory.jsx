@@ -18,6 +18,8 @@ const LeaveHistoryTable = () => {
   const [selectedSender, setSelectedSender] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [leaveToDelete, setLeaveToDelete] = useState(null);
 
   const fetchLeaveHistory = async () => {
     try {
@@ -42,11 +44,18 @@ const LeaveHistoryTable = () => {
     }
   };
 
-  const handleStatusChange = async (id) => {
+  const handleDeleteClick = (leave) => {
+    setLeaveToDelete(leave);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!leaveToDelete) return;
+    
     try {
       const token = Cookies.get("token");
       await axios.put(
-        `/admin/leaves/remove?id=${id}`,
+        `/admin/leaves/remove?id=${leaveToDelete._id}`,
         {},
         {
           headers: {
@@ -55,10 +64,20 @@ const LeaveHistoryTable = () => {
         }
       );
       fetchLeaveHistory();
+      setShowDeleteModal(false);
+      setLeaveToDelete(null);
+      alert("Leave record deleted successfully!");
     } catch (error) {
       console.error(`Failed to delete leave:`, error);
       alert("Failed to delete leave request");
+      setShowDeleteModal(false);
+      setLeaveToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setLeaveToDelete(null);
   };
 
   useEffect(() => {
@@ -209,7 +228,7 @@ const LeaveHistoryTable = () => {
                     </td>
                     <td className="px-4 text-sm font-medium">
                       <button
-                        onClick={() => handleStatusChange(item._id)}
+                        onClick={() => handleDeleteClick(item)}
                         className="text-red-600 hover:text-red-800 hover:bg-red-100 rounded-full text-xl"
                         title="Delete leave request"
                       >
@@ -291,6 +310,44 @@ const LeaveHistoryTable = () => {
               >
                 <FaChevronRight className="h-4 w-4" />
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && leaveToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-red-600 mb-4">
+                Confirm Deletion
+              </h3>
+              <p className="text-sm text-gray-600 mb-2">
+                Are you sure you want to delete the leave record for{" "}
+                <strong>
+                  {leaveToDelete.userId?.firstName} {leaveToDelete.userId?.lastName}
+                </strong>
+                ?
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                This action cannot be undone. The leave record will be permanently removed from the system.
+              </p>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={cancelDelete}
+                  className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                >
+                  Delete Record
+                </button>
+              </div>
             </div>
           </div>
         </div>
