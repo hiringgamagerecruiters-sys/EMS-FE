@@ -8,7 +8,14 @@ import TaskCreated from './TaskCreated';
 function TaskPage() {
   const [activeTab, setActiveTab] = useState('today');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleTaskCreated = () => {
+    // Refresh all task lists when a new task is created
+    setRefreshTrigger(prev => prev + 1);
+    setShowCreateForm(false);
+    setActiveTab('today');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 px-16 py-6">
@@ -19,9 +26,9 @@ function TaskPage() {
             <button
               onClick={() => {
                 setShowCreateForm(!showCreateForm);
-                setActiveTab(showCreateForm ? 'today' : 'CreateForm');
+                setActiveTab(showCreateForm ? 'today' : 'create');
               }}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center transition-colors"
             >
               <MdAssignment className="mr-2" />
               {showCreateForm ? 'Hide Form' : 'Create Task'}
@@ -35,7 +42,11 @@ function TaskPage() {
                 setActiveTab('today');
                 setShowCreateForm(false);
               }}
-              className={`px-4 py-2 rounded ${activeTab === 'today' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded transition-colors ${
+                activeTab === 'today' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
             >
               Today's Tasks
             </button>
@@ -44,7 +55,11 @@ function TaskPage() {
                 setActiveTab('created');
                 setShowCreateForm(false);
               }}
-              className={`px-4 py-2 rounded ${activeTab === 'created' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded transition-colors ${
+                activeTab === 'created' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
             >
               Created Tasks
             </button>
@@ -53,17 +68,28 @@ function TaskPage() {
                 setActiveTab('history');
                 setShowCreateForm(false);
               }}
-              className={`px-4 py-2 rounded ${activeTab === 'history' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded transition-colors ${
+                activeTab === 'history' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
             >
               Task History
             </button>
           </div>
         </div>
+        
         <div className="bg-white p-4 rounded-lg shadow">
-          {activeTab === 'today' && <TodayTasks />}
-          {activeTab === 'created' && <TaskCreated />}
-          {activeTab === 'history' && <TaskHistory />}
-          {activeTab === 'CreateForm' && <TaskForm />}
+          {showCreateForm && <TaskForm onTaskCreated={handleTaskCreated} />}
+          {!showCreateForm && activeTab === 'today' && (
+            <TodayTasks refreshTrigger={refreshTrigger} />
+          )}
+          {!showCreateForm && activeTab === 'created' && (
+            <TaskCreated refreshTrigger={refreshTrigger} />
+          )}
+          {!showCreateForm && activeTab === 'history' && (
+            <TaskHistory refreshTrigger={refreshTrigger} />
+          )}
         </div>
       </div>
     </div>
