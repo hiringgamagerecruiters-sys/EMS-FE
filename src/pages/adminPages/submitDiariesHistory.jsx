@@ -15,7 +15,6 @@ import { Tooltip } from "antd";
 import api from "../../utils/api";
 const BASE_URL = import.meta.env.VITE_API_URL_;
 
-
 const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
   const navigate = useNavigate();
 
@@ -35,36 +34,60 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      return "Invalid Date";
+    }
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours() % 12 || 12).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const ampm = date.getHours() >= 12 ? 'PM' : 'AM';
-    return `${year}-${month}-${day} ${hours}:${minutes} ${ampm}`;
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours() % 12 || 12).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = date.getHours() >= 12 ? 'PM' : 'AM';
+      return `${year}-${month}-${day} ${hours}:${minutes} ${ampm}`;
+    } catch (error) {
+      return "Invalid Date";
+    }
   };
 
-  const filteredDiaries = submitDiaries.filter((diary) => {
+  // Sort diaries by date in descending order (newest first) and filter valid dates
+  const sortedDiaries = [...submitDiaries]
+    .filter(diary => {
+      if (!diary.date) return false;
+      const date = new Date(diary.date);
+      return !isNaN(date.getTime());
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB - dateA;
+    });
+
+  const filteredDiaries = sortedDiaries.filter((diary) => {
     if (!diary || !diary.userId) return false;
-    const fullName = `${diary.userId.firstName || ""} ${
-      diary.userId.lastName || ""
-    }`.toLowerCase();
+    const fullName = `${diary.userId.firstName || ""} ${diary.userId.lastName || ""}`.toLowerCase();
     const employeeId = diary.userId._id || "";
     const formattedDate = formatDate(diary.date).toLowerCase();
+    const diaryName = diary.name || "";
+    
     return (
       fullName.includes(searchTerm.toLowerCase()) ||
       employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      formattedDate.includes(searchTerm.toLowerCase())
+      formattedDate.includes(searchTerm.toLowerCase()) ||
+      diaryName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
@@ -176,8 +199,8 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
 
       if (result.isConfirmed) {
         await api.put(
-          `/admin/diaries/update?id=${id}&status=${status}`,
-          { status },
+          `/admin/diaries/update-status`,
+          { diaryId: id, status },
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -220,7 +243,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
           </div>
           <input
             type="text"
-            placeholder={isHistory ? "Search by name, ID or date (YYYY-MM-DD)..." : "Search......"}
+            placeholder="Search by name, ID, date, or diary name..."
             className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={searchTerm}
             onChange={(e) => {
@@ -236,38 +259,38 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
         <table className="min-w-full divide-y divide-gray-200 shadow-sm rounded-lg overflow-hidden">
           <thead className="bg-cyan-700 text-white">
             <tr>
-              <th className="px-2 py-3 text-left text-xs font-medium  tracking-wider">
+              <th className="px-2 py-3 text-left text-xs font-medium tracking-wider">
                 Profile
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Name
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Mail
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Team
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Job Role
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 University
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Diaries Name
               </th>
-              <th className=" text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Submit Date
               </th>
-              <th className=" text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 View
               </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
+              <th className="text-left text-xs font-medium tracking-wider">
                 Status
               </th>
               {showActions && (
-                <th className="text-left text-xs font-medium  tracking-wider">
+                <th className="text-left text-xs font-medium tracking-wider">
                   Action
                 </th>
               )}
@@ -277,9 +300,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
             {currentRows.map((diary, index) => (
               <tr
                 key={index}
-                className={
-                  index % 2 === 0 ? "bg-white" : "bg-gray-50 hover:bg-gray-100"
-                }
+                className={index % 2 === 0 ? "bg-white" : "bg-gray-50 hover:bg-gray-100"}
               >
                 <td className="whitespace-nowrap py-1">
                   <div className="flex items-center">
@@ -299,9 +320,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                   </div>
                 </td>
                 <td className="whitespace-nowrap text-sm text-gray-500">
-                  {`${diary.userId.firstName || ""} ${
-                    diary.userId.lastName || ""
-                  }`}
+                  {`${diary.userId.firstName || ""} ${diary.userId.lastName || ""}`}
                 </td>
                 <td className="whitespace-nowrap text-sm text-gray-500">
                   {diary.userId.email || "N/A"}
@@ -312,9 +331,9 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                 <td className="whitespace-nowrap text-sm text-gray-500">
                   {diary.userId?.jobRole?.jobRoleName || "N/A"}
                 </td>
-                <td className="text-sm text-gray-500 w-40 break-words ">
-                    {diary.userId.university || "Empty"}
-                  </td>
+                <td className="text-sm text-gray-500 w-40 break-words">
+                  {diary.userId.university || "Empty"}
+                </td>
                 <td className="px-2 text-sm text-gray-500 break-words break-all w-48 pr-10">
                   <Tooltip
                     title={diary.name || "Empty"}
@@ -327,13 +346,11 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                   </Tooltip>
                 </td>
                 <td className="whitespace-nowrap text-sm text-gray-500">
-                  {diary.date
-                    ? formatDate(diary.date)
-                    : "N/A"}
+                  {formatDate(diary.date)}
                 </td>
                 <td className="whitespace-nowrap">
                   <button
-                    onClick={() => isHistory ? setShowSenderDetailsModal(true) || setSelectedSender(diary) : handleViewDetails(diary)}
+                    onClick={() => isHistory ? (setSelectedSender(diary), setShowSenderDetailsModal(true)) : handleViewDetails(diary)}
                     className="text-cyan-700 hover:text-cyan-900"
                   >
                     <FiEye size={20} />
@@ -344,10 +361,14 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                     className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       diary.diaryStatus === "Replied"
                         ? "bg-green-100 text-green-800"
+                        : diary.diaryStatus === "Approved"
+                        ? "bg-blue-100 text-blue-800"
+                        : diary.diaryStatus === "Rejected"
+                        ? "bg-red-100 text-red-800"
                         : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
-                    {diary.diaryStatus || "Unknown"}
+                    {diary.diaryStatus || "Pending"}
                   </span>
                 </td>
                 {showActions && (
@@ -442,9 +463,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                     {diary.userId.email}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {diary.date
-                      ? new Date(diary.date).toLocaleDateString()
-                      : "N/A"}
+                    {formatDate(diary.date)}
                   </p>
                 </div>
               </div>
@@ -454,6 +473,10 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                 className={`px-2 py-1 text-xs font-medium rounded-full ${
                   diary.diaryStatus === "Replied"
                     ? "bg-green-100 text-green-800"
+                    : diary.diaryStatus === "Approved"
+                    ? "bg-blue-100 text-blue-800"
+                    : diary.diaryStatus === "Rejected"
+                    ? "bg-red-100 text-red-800"
                     : "bg-yellow-100 text-yellow-800"
                 }`}
               >
@@ -479,7 +502,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                   </>
                 )}
                 <button
-                  onClick={() => isHistory ? setShowSenderDetailsModal(true) || setSelectedSender(diary) : handleViewDetails(diary)}
+                  onClick={() => isHistory ? (setSelectedSender(diary), setShowSenderDetailsModal(true)) : handleViewDetails(diary)}
                   className="flex items-center text-sm text-cyan-700 hover:text-cyan-900"
                 >
                   <FiEye className="mr-1" size={16} /> View
@@ -536,9 +559,7 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
                         ? `${BASE_URL}/uploads/${selectedIntern.userId.profileImage}`
                         : defaultProfileImage
                     }
-                    alt={`${
-                      selectedIntern.userId?.firstName || "User"
-                    } profile`}
+                    alt={`${selectedIntern.userId?.firstName || "User"} profile`}
                     className="w-40 h-40 rounded-full object-cover"
                     onError={(e) => {
                       e.target.onerror = null;
@@ -625,13 +646,13 @@ const SubmitDiariesHistory = ({ isHistory = false, showActions = false }) => {
       )}
 
       {/* Reply Modal */}
-    {showReplyModal && internToReply && (
-  <Reply
-    internName={internToReply.name}
-    diaryId={internToReply._id} // Add this line
-    onClose={() => setShowReplyModal(false)}
-  />
-)}
+      {showReplyModal && internToReply && (
+        <Reply
+          internName={internToReply.name}
+          diaryId={internToReply._id}
+          onClose={() => setShowReplyModal(false)}
+        />
+      )}
 
       {/* Sender Details Modal */}
       {showSenderDetailsModal && selectedSender && (

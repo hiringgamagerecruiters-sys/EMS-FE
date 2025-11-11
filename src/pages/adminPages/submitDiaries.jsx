@@ -3,7 +3,7 @@ import { FiEye } from "react-icons/fi";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { IoIosCloseCircleOutline } from "react-icons/io";
-import { MdKeyboardArrowDown, MdClose } from "react-icons/md";
+import { MdKeyboardArrowDown } from "react-icons/md";
 import Reply from "../../components/ui/Reply/Reply";
 import SenderDetails from "../../components/ui/SenderDetails/SenderDetails";
 import defaultProfileImage from "../../assets/demo.jpg";
@@ -29,36 +29,76 @@ const SubmitDiaries = () => {
 
   const rowsPerPage = 6;
 
+  // Fetch diaries function
+  const fetchDashboardData = async () => {
+    try {
+      const token = Cookies.get("token");
 
- function combineDateTime(dateStr, timeStr) {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
+      if (!token) {
+        alert("Unauthorized. Please log in.");
+        navigate("/login");
+        return;
+      }
 
-  if (!timeStr) return date;
+      const response = await api.get(
+        "/admin/diaries",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-  const [time, modifier] = timeStr.split(" "); // "02:30 PM" -> ["02:30", "PM"]
-  let [hours, minutes] = time.split(":").map(Number);
+      const validDiaries = response.data.filter(
+        (diary) => diary && diary.userId
+      );
+      setSubmitDiaries(validDiaries);
+      setLoading(false);
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+      alert("Failed to load dashboard data. Please try again.");
+      if (err.response?.status === 401) {
+        navigate("/login");
+      }
+      setLoading(false);
+    }
+  };
 
-  if (modifier === "PM" && hours < 12) hours += 12;
-  if (modifier === "AM" && hours === 12) hours = 0;
+  function combineDateTime(dateStr, timeStr) {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
 
-  date.setHours(hours);
-  date.setMinutes(minutes);
-  return date;
-}
+    if (!timeStr) return date;
 
+    const [time, modifier] = timeStr.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
 
+    if (modifier === "PM" && hours < 12) hours += 12;
+    if (modifier === "AM" && hours === 12) hours = 0;
 
-  const filteredDiaries = submitDiaries.filter((diary) => {
+    date.setHours(hours);
+    date.setMinutes(minutes);
+    return date;
+  }
+
+  // Sort diaries by date in descending order (newest first)
+  const sortedDiaries = [...submitDiaries].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB - dateA;
+  });
+
+  const filteredDiaries = sortedDiaries.filter((diary) => {
     if (!diary || !diary.userId) return false;
-    const fullName = `${diary.userId.firstName || ""} ${diary.userId.lastName || ""
-      }`.toLowerCase();
+    
+    const fullName = `${diary.userId.firstName || ""} ${diary.userId.lastName || ""}`.toLowerCase();
     const employeeId = diary.userId._id || "";
     const date = diary.date || "";
+    const diaryName = diary.name || "";
+    
     return (
       fullName.includes(searchTerm.toLowerCase()) ||
       employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      date.includes(searchTerm.toLowerCase())
+      date.includes(searchTerm.toLowerCase()) ||
+      diaryName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
 
@@ -78,44 +118,60 @@ const SubmitDiaries = () => {
   };
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const token = Cookies.get("token");
-
-        if (!token) {
-          alert("Unauthorized. Please log in.");
-          navigate("/login");
-          return;
-        }
-
-        const response = await api.get(
-          "/admin/diaries",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        const validDiaries = response.data.filter(
-          (diary) => diary && diary.userId
-        );
-        setSubmitDiaries(validDiaries);
-        setLoading(false);
-      } catch (err) {
-        console.error("Dashboard fetch error:", err);
-        alert("Failed to load dashboard data. Please try again.");
-        if (err.response?.status === 401) {
-          navigate("/login");
-        }
-        setLoading(false);
+  const handleStatusChange = async (diaryId, newStatus) => {
+    try {
+      const token = Cookies.get("token");
+      if (!token) {
+        alert("Unauthorized! Please log in again.");
+        return;
       }
-    };
 
+      // Prepare form data since backend expects file-compatible form
+      const formData = new FormData();
+      formData.append("id", diaryId);
+      formData.append("status", newStatus);
+
+      console.log("Updating diary status:", { diaryId, newStatus });
+
+      const response = await api.put(
+        "/admin/diaries/update",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      alert(response.data.message || "Diary status updated successfully");
+      
+      // Update local state immediately for better UX
+      setSubmitDiaries(prev => 
+        prev.map(diary => 
+          diary._id === diaryId 
+            ? { ...diary, diaryStatus: newStatus }
+            : diary
+        )
+      );
+      
+      // Also update selected intern if it's the one being modified
+      if (selectedIntern && selectedIntern._id === diaryId) {
+        setSelectedIntern(prev => ({ ...prev, diaryStatus: newStatus }));
+      }
+      
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          "Failed to update diary status. Please try again.";
+      alert(errorMessage);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
   }, [navigate]);
-
-
-
 
   if (loading) {
     return (
@@ -138,7 +194,7 @@ const SubmitDiaries = () => {
           </div>
           <input
             type="text"
-            placeholder="Search......"
+            placeholder="Search by name, ID, date, or diary name..."
             className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={searchTerm}
             onChange={(e) => {
@@ -151,130 +207,160 @@ const SubmitDiaries = () => {
 
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 shadow-sm rounded-lg overflow-hidden">
-          <thead className="bg-cyan-700 text-white">
-            <tr>
-              <th className="px-2 py-3 text-left text-xs font-medium  tracking-wider">
-                Profile
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                Name
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                Mail
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                Team
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                Job Role
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                University
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                Diaries Name
-              </th>
-              <th className=" text-left text-xs font-medium  tracking-wider">
-                Submit Date
-              </th>
-              <th className=" text-left text-xs font-medium  tracking-wider">
-                View
-              </th>
-              <th className="text-left text-xs font-medium  tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {currentRows.map((diary, index) => (
-              <tr
-                key={index}
-                className={
-                  index % 2 === 0 ? "bg-white" : "bg-gray-50 hover:bg-gray-100"
-                }
-              >
-                <td className="whitespace-nowrap py-1">
-                  <div className="flex items-center">
-                    <img
-                      src={
-                        diary.userId?.profileImage
-                          ? `http://localhost:5000/uploads/${diary.userId.profileImage}`
-                          : defaultProfileImage
-                      }
-                      alt={`${diary.userId?.firstName || "User"} profile`}
-                      className="w-10 h-10 rounded-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = defaultProfileImage;
-                      }}
-                    />
-                  </div>
-                </td>
-                <td className="whitespace-nowrap text-sm text-gray-500">
-                  {`${diary.userId.firstName || ""} ${diary.userId.lastName || ""
-                    }`}
-                </td>
-                <td className="whitespace-nowrap text-sm text-gray-500">
-                  {diary.userId.email || "N/A"}
-                </td>
-                <td className="whitespace-nowrap text-sm text-gray-500">
-                  {diary.userId?.team?.teamName || "N/A"}
-                </td>
-                <td className="whitespace-nowrap text-sm text-gray-500">
-                  {diary.userId?.jobRole?.jobRoleName || "N/A"}
-                </td>
-                <td className="text-sm text-gray-500 w-40 break-words ">
-                  {diary.userId.university || "Empty"}
-                </td>
-                <td className="px-2 text-sm text-gray-500 break-words break-all w-48 pr-10">
-                  <Tooltip
-                    title={diary.name || "Empty"}
-                    placement="bottom"
-                    color="blue"
-                  >
-                    {(diary.name || "Empty").length > 35
-                      ? (diary.name || "Empty").slice(0, 35) + "..."
-                      : diary.name || "Empty"}
-                  </Tooltip>
-                </td>
-                <td className="whitespace-nowrap text-sm text-gray-500">
-                  {diary.date
-                    ? `${new Date(diary.date).getFullYear()}-${String(
-                      new Date(diary.date).getMonth() + 1
-                    ).padStart(2, "0")}-${String(
-                      new Date(diary.date).getDate()
-                    ).padStart(2, "0")}`
-                    : "N/A"}
-                </td>
-                <td className="whitespace-nowrap">
-                  <button
-                    onClick={() => handleViewDetails(diary)}
-                    className="text-cyan-700 hover:text-cyan-900"
-                  >
-                    <FiEye size={20} />
-                  </button>
-                </td>
-                <td className="whitespace-nowrap">
-                  <span
-                    className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${diary.diaryStatus === "Replied"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-yellow-100 text-yellow-800"
-                      }`}
-                  >
-                    {diary.diaryStatus || "Unknown"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden shadow-sm rounded-lg border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-cyan-700 text-white">
+                <tr>
+                  {[
+                    "Profile",
+                    "Name",
+                    "Mail",
+                    "Team",
+                    "Job Role",
+                    "University",
+                    "Diaries Name",
+                    "Submit Date",
+                    "View",
+                    "Status",
+                    "Actions",
+                  ].map((heading, index) => (
+                    <th
+                      key={index}
+                      className="px-4 py-3 text-left text-xs font-semibold tracking-wider"
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-        {/* Desktop Pagination */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex-1 flex justify-between items-center">
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentRows.map((diary, index) => (
+                  <tr
+                    key={index}
+                    className={`${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    } hover:bg-gray-100`}
+                  >
+                    {/* Profile */}
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex items-center justify-center">
+                        <img
+                          src={
+                            diary.userId?.profileImage
+                              ? `http://localhost:5000/uploads/${diary.userId.profileImage}`
+                              : defaultProfileImage
+                          }
+                          alt={`${diary.userId?.firstName || "User"} profile`}
+                          className="w-10 h-10 rounded-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = defaultProfileImage;
+                          }}
+                        />
+                      </div>
+                    </td>
+
+                    {/* User Details */}
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {`${diary.userId.firstName || ""} ${
+                        diary.userId.lastName || ""
+                      }`}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {diary.userId.email || "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {diary.userId?.team?.teamName || "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {diary.userId?.jobRole?.jobRoleName || "N/A"}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-700 w-40 break-words">
+                      {diary.userId.university || "Empty"}
+                    </td>
+
+                    {/* Diary Name */}
+                    <td className="px-4 py-2 text-sm text-gray-700 w-48 break-words">
+                      <Tooltip
+                        title={diary.name || "Empty"}
+                        placement="bottom"
+                        color="blue"
+                      >
+                        {(diary.name || "Empty").length > 35
+                          ? (diary.name || "Empty").slice(0, 35) + "..."
+                          : diary.name || "Empty"}
+                      </Tooltip>
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {diary.date
+                        ? `${new Date(diary.date).getFullYear()}-${String(
+                            new Date(diary.date).getMonth() + 1
+                          ).padStart(2, "0")}-${String(
+                            new Date(diary.date).getDate()
+                          ).padStart(2, "0")}`
+                        : "N/A"}
+                    </td>
+
+                    {/* View Button */}
+                    <td className="px-4 py-2 text-center">
+                      <button
+                        onClick={() => handleViewDetails(diary)}
+                        className="text-cyan-700 hover:text-cyan-900"
+                      >
+                        <FiEye size={20} />
+                      </button>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-2 text-center">
+                      <span
+                        className={`px-3 py-1 inline-flex text-xs font-semibold rounded-full ${
+                          diary.diaryStatus === "Replied"
+                            ? "bg-green-100 text-green-800"
+                            : diary.diaryStatus === "Approved"
+                            ? "bg-blue-100 text-blue-800"
+                            : diary.diaryStatus === "Rejected"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {diary.diaryStatus || "Pending"}
+                      </span>
+                    </td>
+
+                    {/* Action Buttons */}
+                    <td className="px-4 py-2 text-center">
+                      <div className="flex justify-center space-x-2">
+                        <button
+                          onClick={() => handleStatusChange(diary._id, "Approved")}
+                          className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-60"
+                          disabled={diary.diaryStatus === "Approved"}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(diary._id, "Rejected")}
+                          className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:opacity-60"
+                          disabled={diary.diaryStatus === "Rejected"}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-6 px-4">
             <span className="text-sm text-gray-700">
-              Showing page {currentPage} of {totalPages}
+              Showing page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
             </span>
             <div className="flex space-x-1">
               <button
@@ -288,10 +374,11 @@ const SubmitDiaries = () => {
                 <button
                   key={i + 1}
                   onClick={() => paginate(i + 1)}
-                  className={`px-3 py-1 rounded-md text-sm font-medium ${currentPage === i + 1
+                  className={`px-3 py-1 rounded-md text-sm font-medium ${
+                    currentPage === i + 1
                       ? "bg-cyan-700 text-white"
                       : "text-gray-700 bg-white hover:bg-gray-50 border border-gray-300"
-                    }`}
+                  }`}
                 >
                   {i + 1}
                 </button>
@@ -345,10 +432,15 @@ const SubmitDiaries = () => {
             </div>
             <div className="mt-3 flex justify-between items-center">
               <span
-                className={`px-2 py-1 text-xs font-medium rounded-full ${diary.diaryStatus === "Replied"
+                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  diary.diaryStatus === "Replied"
                     ? "bg-green-100 text-green-800"
+                    : diary.diaryStatus === "Approved"
+                    ? "bg-blue-100 text-blue-800"
+                    : diary.diaryStatus === "Rejected"
+                    ? "bg-red-100 text-red-800"
                     : "bg-yellow-100 text-yellow-800"
-                  }`}
+                }`}
               >
                 {diary.diaryStatus}
               </span>
@@ -357,6 +449,22 @@ const SubmitDiaries = () => {
                 className="flex items-center text-sm text-cyan-700 hover:text-cyan-900"
               >
                 <FiEye className="mr-1" size={16} /> View
+              </button>
+            </div>
+            <div className="mt-2 flex space-x-2">
+              <button
+                onClick={() => handleStatusChange(diary._id, "Approved")}
+                className="flex-1 px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-60"
+                disabled={diary.diaryStatus === "Approved"}
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => handleStatusChange(diary._id, "Rejected")}
+                className="flex-1 px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:opacity-60"
+                disabled={diary.diaryStatus === "Rejected"}
+              >
+                Reject
               </button>
             </div>
           </div>
@@ -409,8 +517,7 @@ const SubmitDiaries = () => {
                         ? `http://localhost:5000/uploads/${selectedIntern.userId.profileImage}`
                         : defaultProfileImage
                     }
-                    alt={`${selectedIntern.userId?.firstName || "User"
-                      } profile`}
+                    alt={`${selectedIntern.userId?.firstName || "User"} profile`}
                     className="w-40 h-40 rounded-full object-cover"
                     onError={(e) => {
                       e.target.onerror = null;
@@ -422,6 +529,23 @@ const SubmitDiaries = () => {
                     {selectedIntern.userId.lastName}
                   </h4>
                   <p className="text-gray-600">{selectedIntern.userId.email}</p>
+                </div>
+                
+                <div className="flex space-x-2 justify-center">
+                  <button
+                    onClick={() => handleStatusChange(selectedIntern._id, "Approved")}
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-60"
+                    disabled={selectedIntern.diaryStatus === "Approved"}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleStatusChange(selectedIntern._id, "Rejected")}
+                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-60"
+                    disabled={selectedIntern.diaryStatus === "Rejected"}
+                  >
+                    Reject
+                  </button>
                 </div>
               </div>
 
@@ -464,28 +588,23 @@ const SubmitDiaries = () => {
                 </div>
                 <div>
                   <h5 className="font-bold text-gray-800 mb-2">Submit Date</h5>
-         <p className="text-gray-700">
-  {selectedIntern.date
-    ? (() => {
-        const dt = combineDateTime(selectedIntern.date, selectedIntern.time);
-        const year = dt.getFullYear();
-        const month = String(dt.getMonth() + 1).padStart(2, "0");
-        const day = String(dt.getDate()).padStart(2, "0");
-        const time = dt.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
-        return `${year}-${month}-${day}, ${time}`;
-      })()
-    : "N/A"}
-</p>
-
-
-
-
+                  <p className="text-gray-700">
+                    {selectedIntern.date
+                      ? (() => {
+                          const dt = combineDateTime(selectedIntern.date, selectedIntern.time);
+                          const year = dt.getFullYear();
+                          const month = String(dt.getMonth() + 1).padStart(2, "0");
+                          const day = String(dt.getDate()).padStart(2, "0");
+                          const time = dt.toLocaleTimeString("en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          });
+                          return `${year}-${month}-${day}, ${time}`;
+                        })()
+                      : "N/A"}
+                  </p>
                 </div>
-
 
                 <div className="flex space-x-4 pt-4">
                   <button
@@ -517,6 +636,7 @@ const SubmitDiaries = () => {
       {showReplyModal && internToReply && (
         <Reply
           internName={internToReply.name}
+          diaryId={internToReply._id}
           onClose={() => setShowReplyModal(false)}
         />
       )}
