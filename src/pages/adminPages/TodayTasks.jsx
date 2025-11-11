@@ -78,12 +78,40 @@ function TodayTasks({ refreshTrigger = 0 }) {
     setSearchQuery(e.target.value.toLowerCase());
   };
 
-  const filteredTasks = tasks.filter(task =>
-    task.name?.toLowerCase().includes(searchQuery) ||
-    task.assignedTo?.email?.toLowerCase().includes(searchQuery) ||
-    task.assignedTo?.firstName?.toLowerCase().includes(searchQuery) ||
-    task.assignedTo?.lastName?.toLowerCase().includes(searchQuery)
-  );
+  // FIXED: Improved search filter that properly handles email search
+  const filteredTasks = tasks.filter(task => {
+    if (!searchQuery) return true;
+    
+    const searchTerm = searchQuery.toLowerCase();
+    
+    // Search in task name
+    if (task.name?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    // Search in assigned user's email (fixed)
+    if (task.assignedTo?.email?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    // Search in assigned user's first name
+    if (task.assignedTo?.firstName?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    // Search in assigned user's last name
+    if (task.assignedTo?.lastName?.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    // Search in full name (combination of first and last name)
+    const fullName = `${task.assignedTo?.firstName || ''} ${task.assignedTo?.lastName || ''}`.toLowerCase().trim();
+    if (fullName.includes(searchTerm)) {
+      return true;
+    }
+    
+    return false;
+  });
 
   // Categorize tasks for better display
   const tasksDueToday = filteredTasks.filter(task => {
@@ -149,13 +177,25 @@ function TodayTasks({ refreshTrigger = 0 }) {
         <div className="w-80">
           <input
             type="text"
-            placeholder="Search by task name, email, or user name"
+            placeholder="Search by task name, user email, or user name"
             value={searchQuery}
             onChange={handleSearchChange}
             className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
+
+      {/* Debug search info (remove in production) */}
+      {searchQuery && (
+        <div className="mb-4 p-2 bg-blue-50 rounded text-sm text-blue-700">
+          Searching for: "{searchQuery}" • Found {filteredTasks.length} tasks
+          {filteredTasks.length > 0 && (
+            <div className="mt-1 text-xs">
+              Matching tasks: {filteredTasks.map(t => t.name).join(', ')}
+            </div>
+          )}
+        </div>
+      )}
 
       {filteredTasks.length > 0 ? (
         <div>
