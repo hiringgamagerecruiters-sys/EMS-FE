@@ -1,3 +1,4 @@
+// src/pages/employeePages/Dashboard.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { FiChevronDown, FiChevronUp, FiCalendar, FiClock, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import AttendanceModel from "../../components/attendancePopUp";
@@ -16,20 +17,9 @@ function Dashboard() {
   const [showAllHistory, setShowAllHistory] = useState(false); 
   const [currentTimeStatus, setCurrentTimeStatus] = useState(""); 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [todayAttendanceRecord, setTodayAttendanceRecord] = useState(null);
+  const [loading, setLoading] = useState(true);
   const visibleHistoryCount = 4;
-
-  // Deduplicate attendance records by date
-  const getUniqueAttendanceDays = (history) => {
-    const uniqueDays = {};
-    return history.filter(item => {
-      const dateKey = item.date;
-      if (!uniqueDays[dateKey]) {
-        uniqueDays[dateKey] = true;
-        return true;
-      }
-      return false;
-    });
-  };
 
   // Check current time and set status
   const checkTimeStatus = () => {
@@ -40,37 +30,40 @@ function Dashboard() {
     
     // Define time boundaries in minutes
     const startTime = 8 * 60; // 8:00 AM
-    const earlyEndTime = 8 * 60 + 30; // 8:30 AM
+    const onTimeDeadline = 8 * 60 + 15; // 8:15 AM
     const endTime = 17 * 60 + 30; // 5:30 PM
     
     if (currentTimeInMinutes < startTime) {
       setCurrentTimeStatus("beforehours");
-    } else if (currentTimeInMinutes >= startTime && currentTimeInMinutes < earlyEndTime) {
-      setCurrentTimeStatus("early");
-    } else if (currentTimeInMinutes >= earlyEndTime && currentTimeInMinutes <= endTime) {
+    } else if (currentTimeInMinutes >= startTime && currentTimeInMinutes <= onTimeDeadline) {
       setCurrentTimeStatus("ontime");
+    } else if (currentTimeInMinutes > onTimeDeadline && currentTimeInMinutes <= endTime) {
+      setCurrentTimeStatus("latewindow");
     } else {
       setCurrentTimeStatus("afterhours");
     }
   };
 
-  // Handle marking attendance
+  // Handle marking attendance - USING EXISTING ENDPOINT
   const handleMakeAttendance = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || hasAttendedToday) {
+      alert("Attendance already being processed or already recorded for today.");
+      return;
+    }
     
     setIsSubmitting(true);
-    setHasAttendedToday(true); // Immediately disable button
-    
+
+    // Skip pre-submission check since endpoint doesn't exist
+    // We'll rely on backend validation for duplicates
+
     if (currentTimeStatus === "beforehours") {
       alert("Attendance can only be marked after 8:00 AM.");
-      setHasAttendedToday(false);
       setIsSubmitting(false);
       return;
     }
     
     if (currentTimeStatus === "afterhours") {
       alert("Attendance cannot be marked after 5:30 PM.");
-      setHasAttendedToday(false);
       setIsSubmitting(false);
       return;
     }
@@ -85,13 +78,13 @@ function Dashboard() {
       if (!token) {
         alert("Please log in first.");
         navigate('/login');
-        setHasAttendedToday(false);
         setIsSubmitting(false);
         return;
       }
 
-      console.log("Sending attendance data:", payload);
+      console.log("🟢 Sending attendance data:", payload);
 
+      // Use the existing employee/attendance endpoint
       const response = await api.post(
         "/employee/attendance",
         payload,
@@ -103,23 +96,38 @@ function Dashboard() {
         }
       );
 
-      alert(response.data.msg || "Attendance recorded successfully!");
-      setShowAttendancePopUp(false);
-      // Keep hasAttendedToday as true
-      fetchAttendanceHistory();
-
-    } catch (error) {
-      console.error("Attendance submission error:", error);
-      // Re-enable button on error
-      setHasAttendedToday(false);
-      
-      if (error.response?.status === 401) {
-        alert('Session expired. Please log in again.');
-        navigate('/login');
-      } else if (error.response?.status === 409) {
-        // Handle duplicate attendance from server
+      // Handle response based on what your backend returns
+      if (response.data.message && response.data.message.includes("already recorded")) {
         alert("Attendance already recorded for today.");
         setHasAttendedToday(true);
+        if (response.data.existingRecord) {
+          setTodayAttendanceRecord(response.data.existingRecord);
+        }
+      } else {
+        alert("Attendance recorded successfully!");
+        setHasAttendedToday(true);
+        // Set a mock record since backend might not return full attendance object
+        setTodayAttendanceRecord({
+          time: time,
+          status: currentTimeStatus === "ontime" ? "Attended" : "Late",
+          date: date
+        });
+      }
+      
+      setShowAttendancePopUp(false);
+      await fetchAttendanceStatus(); // Refresh data
+
+    } catch (error) {
+      console.error("❌ Attendance submission error:", error);
+      
+      if (error.response?.status === 409 || error.response?.status === 400) {
+        // Handle duplicate attendance from server
+        const errorMessage = error.response.data.message || "Attendance already recorded for today";
+        alert(errorMessage);
+        setHasAttendedToday(true);
+      } else if (error.response?.status === 401) {
+        alert('Session expired. Please log in again.');
+        navigate('/login');
       } else {
         alert("Failed to submit attendance. Please try again.");
       }
@@ -128,6 +136,7 @@ function Dashboard() {
     }
   };
 
+  // Check attendance status using existing endpoints
   const fetchAttendanceStatus = async () => {
     try {
       const token = Cookies.get('token');
@@ -138,23 +147,57 @@ function Dashboard() {
         return;
       }
 
-      const attendanceStatusResponse = await api.get('/employee/is_attendance', {
-        params: { date: date },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const attendanceData = attendanceStatusResponse.data.attendance;
-
-      // Properly check if attendance already exists for today
-      if (attendanceData && attendanceData.date === date) {
-        setHasAttendedToday(true);
-      } else {
+      // Try to get today's attendance using existing endpoint
+      let todayAttendance = null;
+      try {
+        // Use the existing is_attendance endpoint
+        const todayResponse = await api.get('/employee/is_attendance', {
+          params: { date: date },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (todayResponse.data.attendance) {
+          todayAttendance = todayResponse.data.attendance;
+          setHasAttendedToday(true);
+          setTodayAttendanceRecord(todayAttendance);
+        } else {
+          setHasAttendedToday(false);
+          setTodayAttendanceRecord(null);
+        }
+      } catch (error) {
+        console.log('Could not check today\'s attendance:', error.message);
         setHasAttendedToday(false);
       }
 
-      await fetchAttendanceHistory();
+      // Try to get attendance history using existing endpoint
+      try {
+        const historyResponse = await api.get('/employee/attendance/history', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (historyResponse.data && Array.isArray(historyResponse.data)) {
+          const uniqueRecords = [];
+          const seenDates = new Set();
+          
+          historyResponse.data.forEach(item => {
+            if (!seenDates.has(item.date)) {
+              seenDates.add(item.date);
+              uniqueRecords.push(item);
+            }
+          });
+
+          const sortedHistory = uniqueRecords.sort((a, b) => {
+            const dateA = new Date(a.date.split('/').reverse().join('-'));
+            const dateB = new Date(b.date.split('/').reverse().join('-'));
+            return dateB - dateA;
+          });
+
+          setAttendanceHistory(sortedHistory);
+        }
+      } catch (error) {
+        console.log('Could not fetch attendance history:', error.message);
+        setAttendanceHistory([]);
+      }
 
     } catch (err) {
       console.error('❌ Attendance fetch error:', err);
@@ -162,36 +205,11 @@ function Dashboard() {
         alert('Session expired. Please log in again.');
         navigate('/login');
       } else {
-        alert('Failed to check attendance status. Please try again.');
+        console.log('No attendance records found (this is normal for new users)');
+        setAttendanceHistory([]);
       }
-    }
-  };
-
-  const fetchAttendanceHistory = async () => {
-    try {
-      const token = Cookies.get('token');
-      if (!token) {
-        alert('Unauthorized. Please log in.');
-        navigate('/login');
-        return;
-      }
-      const historyResponse = await api.get('/employee/attendance/history', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-     
-      const sortedHistory = historyResponse.data.sort((a, b) => {
-        const [dayA, monthA, yearA] = a.date.split('/').map(Number);
-        const [dayB, monthB, yearB] = b.date.split('/').map(Number);
-        const dateA = new Date(yearA, monthA - 1, dayA);
-        const dateB = new Date(yearB, monthB - 1, dayB);
-        return dateB - dateA; 
-      });
-
-      setAttendanceHistory(sortedHistory);
-    } catch (err) {
-      console.error('❌ Attendance history fetch error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,16 +226,21 @@ function Dashboard() {
   const closePopUp = () => setShowAttendancePopUp(false);
   const toggleShowAllHistory = () => setShowAllHistory(prev => !prev);
 
-  // Use deduplicated history for display and calculations
-  const uniqueAttendanceHistory = getUniqueAttendanceDays(attendanceHistory);
+  // Use the already deduplicated history
   const displayedHistory = showAllHistory
-    ? uniqueAttendanceHistory
-    : uniqueAttendanceHistory.slice(0, visibleHistoryCount);
+    ? attendanceHistory
+    : attendanceHistory.slice(0, visibleHistoryCount);
 
-  const totalDays = uniqueAttendanceHistory.length;
-  const attendedDays = uniqueAttendanceHistory.filter(item => item.status === "Attended").length;
-  const leaveDays = uniqueAttendanceHistory.filter(item => item.status === "Leave").length;
-  const lateDays = uniqueAttendanceHistory.filter(item => item.status === "Late").length;
+  const totalDays = attendanceHistory.length;
+  const attendedDays = attendanceHistory.filter(item => 
+    item.status === "Attended" || item.status === "attended"
+  ).length;
+  const leaveDays = attendanceHistory.filter(item => 
+    item.status === "Leave" || item.status === "leave"
+  ).length;
+  const lateDays = attendanceHistory.filter(item => 
+    item.status === "Late" || item.status === "late"
+  ).length;
   const attendancePercentage = totalDays > 0 ? Math.round((attendedDays / totalDays) * 100) : 0;
 
   const monthName = new Date().toLocaleString('default', { month: 'long' });
@@ -225,22 +248,47 @@ function Dashboard() {
   const canMarkAttendance = 
     !hasAttendedToday && 
     !isSubmitting &&
-    (currentTimeStatus === "early" || currentTimeStatus === "ontime");
+    (currentTimeStatus === "ontime" || currentTimeStatus === "latewindow");
 
   const getTimeStatusMessage = () => {
+    if (hasAttendedToday && todayAttendanceRecord) {
+      return `Attendance recorded at ${todayAttendanceRecord.time} (${todayAttendanceRecord.status})`;
+    }
+    
     switch(currentTimeStatus) {
       case "beforehours":
         return "Attendance can be marked after 8:00 AM";
-      case "early":
-        return "You're marking attendance early today!";
       case "ontime":
-        return "You can mark your attendance now";
+        return "You're on time! Mark your attendance";
+      case "latewindow":
+        return "You can still mark attendance (will be marked as Late)";
       case "afterhours":
         return "Attendance cannot be marked after 5:30 PM";
       default:
         return "";
     }
   };
+
+  const getStatusColor = (status) => {
+    const statusLower = status?.toLowerCase();
+    switch(statusLower) {
+      case 'attended': return "bg-green-100/70 text-green-800";
+      case 'leave': return "bg-blue-100/70 text-blue-800";
+      case 'late': return "bg-amber-100/70 text-amber-800";
+      default: return "bg-gray-100/70 text-gray-800";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading attendance data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen flex flex-col items-center px-4 py-8 gap-8 bg-gradient-to-br from-blue-50 to-purple-50 relative overflow-hidden">
@@ -252,7 +300,8 @@ function Dashboard() {
           <AttendanceModel
             onCancel={closePopUp}
             handleMakeAttendance={handleMakeAttendance}
-            isEarly={currentTimeStatus === "early"}
+            isEarly={currentTimeStatus === "ontime"}
+            isLate={currentTimeStatus === "latewindow"}
           />
         </div>
       )}
@@ -273,6 +322,7 @@ function Dashboard() {
       </div>
 
       <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
+        {/* Today's Status Card */}
         <div className="bg-white/70 backdrop-blur-md p-6 rounded-xl border border-white/30 shadow-sm hover:shadow-md transition-all">
           <div className="flex justify-between items-start">
             <div>
@@ -280,7 +330,7 @@ function Dashboard() {
               <p className={`mt-1 text-2xl font-semibold ${
                 hasAttendedToday ? "text-green-700" : "text-amber-600"
               }`}>
-                {hasAttendedToday ? "Present" : "Pending"}
+                {hasAttendedToday ? (todayAttendanceRecord?.status || "Present") : "Pending"}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {getTimeStatusMessage()}
@@ -292,21 +342,18 @@ function Dashboard() {
               <FiAlertCircle className="text-amber-500 text-2xl" />
             )}
           </div>
-          {canMarkAttendance ? (
-            <button
-              onClick={() => setShowAttendancePopUp(true)} 
-              className="mt-6 w-full py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
-            >
-              <FiClock className="text-lg" />
-              Mark Attendance
-            </button>
-          ) : hasAttendedToday ? (
+          
+          {/* Improved Button Logic */}
+          {hasAttendedToday ? (
             <button
               disabled
               className="mt-6 w-full py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 bg-gray-100/70 text-gray-500 cursor-not-allowed"
             >
               <FiCheckCircle className="text-lg" />
-              Attendance Recorded
+              {todayAttendanceRecord ? 
+                `Attendance Recorded (${todayAttendanceRecord.time})` : 
+                'Attendance Recorded'
+              }
             </button>
           ) : isSubmitting ? (
             <button
@@ -314,7 +361,15 @@ function Dashboard() {
               className="mt-6 w-full py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 bg-gray-100/70 text-gray-500 cursor-not-allowed"
             >
               <FiClock className="text-lg animate-spin" />
-              Recording...
+              Recording Attendance...
+            </button>
+          ) : canMarkAttendance ? (
+            <button
+              onClick={() => setShowAttendancePopUp(true)} 
+              className="mt-6 w-full py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md"
+            >
+              <FiClock className="text-lg" />
+              {currentTimeStatus === "ontime" ? "Mark Attendance" : "Mark Attendance (Late)"}
             </button>
           ) : (
             <button
@@ -329,6 +384,7 @@ function Dashboard() {
           )}
         </div>
 
+        {/* Month Summary Card */}
         <div className="bg-white/70 backdrop-blur-md p-6 rounded-xl border border-white/30 shadow-sm hover:shadow-md transition-all">
           <h3 className="text-sm font-medium text-gray-600">{monthName} Summary</h3>
           <div className="mt-4 flex items-center justify-between">
@@ -351,6 +407,7 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* Attendance Rate Card */}
         <div className="bg-white/70 backdrop-blur-md p-6 rounded-xl border border-white/30 shadow-sm hover:shadow-md transition-all">
           <h3 className="text-sm font-medium text-gray-600">Attendance Rate</h3>
           <div className="mt-4 flex items-center gap-4">
@@ -398,6 +455,7 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Recent Attendance Card */}
       <div className="w-full max-w-6xl bg-white/70 backdrop-blur-md rounded-xl border border-white/30 shadow-sm hover:shadow-md transition-all overflow-hidden z-10">
         <div className="p-6 border-b border-white/30 flex justify-between items-center">
           <h2 className="font-bold text-gray-800">Recent Attendance</h2>
@@ -422,7 +480,7 @@ function Dashboard() {
         <div className="divide-y divide-white/30">
           {displayedHistory.length > 0 ? (
             displayedHistory.map((item, index) => {
-              const formattedDate = item.date; // Use original date format
+              const formattedDate = item.date;
 
               return (
                 <div key={`${item.date}-${index}`} className="p-4 hover:bg-white/50 transition-colors group">
@@ -439,11 +497,7 @@ function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${
-                      item.status === "Attended" ? "bg-green-100/70 text-green-800" :
-                      item.status === "Leave" ? "bg-blue-100/70 text-blue-800" :
-                      "bg-amber-100/70 text-amber-800"
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${getStatusColor(item.status)}`}>
                       {item.status}
                     </span>
                   </div>
@@ -451,7 +505,11 @@ function Dashboard() {
               );
             })
           ) : (
-            <div className="p-4 text-center text-gray-600">No attendance history available.</div>
+            <div className="p-8 text-center text-gray-600">
+              <FiCalendar className="text-4xl text-gray-300 mx-auto mb-3" />
+              <p>No attendance history available.</p>
+              <p className="text-sm text-gray-500 mt-1">Your attendance records will appear here.</p>
+            </div>
           )}
         </div>
       </div>

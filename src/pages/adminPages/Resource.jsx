@@ -18,11 +18,88 @@ const Resource = () => {
   const [teams, setTeams] = useState([]);
   const [jobRoles, setJobRoles] = useState([]);
   const [jobRoleError, setJobRoleError] = useState("");
-  const [setTeamError] = useState("");
+  const [teamError, setTeamError] = useState("");
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  // Fetch all data
+ const fetchAllData = async () => {
+  try {
+    setLoading(true);
+    const token = Cookies.get("token");
+    if (!token) {
+      alert("Unauthorized. Please log in.");
+      navigate("/login");
+      return;
+    }
+
+    // Fetch all data in parallel with better error handling
+    const [resourceResponse, teamsResponse, jobRolesResponse] = await Promise.all([
+      api.get("/admin/learning_resource", { 
+        headers: { Authorization: `Bearer ${token}` } 
+      }).catch(err => {
+        console.error("Learning resources fetch failed:", err);
+        // Return empty array if learning resources fail
+        return { data: [] };
+      }),
+      api.get("/admin/teams", { 
+        headers: { Authorization: `Bearer ${token}` } 
+      }),
+      api.get("/admin/job-roles", { 
+        headers: { Authorization: `Bearer ${token}` } 
+      })
+    ]);
+
+    setResource(resourceResponse.data || []);
+    setTeams(teamsResponse.data);
+    setJobRoles(jobRolesResponse.data);
+    setLoading(false);
+    
+  } catch (err) {
+    console.error("Data fetch error:", err);
+    
+    if (err.response?.status === 401) {
+      alert("Unauthorized. Please log in.");
+      navigate("/login");
+    } else {
+      alert("Failed to load some data. Please try again.");
+    }
+    
+    // Set empty arrays to prevent UI crashes
+    setResource([]);
+    setTeams([]);
+    setJobRoles([]);
+    setLoading(false);
+  }
+};
+
+  // Fetch teams for the modal
+  const fetchTeams = async () => {
+    try {
+      const token = Cookies.get("token");
+      const response = await api.get("/admin/teams", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeams(response.data);
+    } catch (err) {
+      console.error("Failed to load teams:", err);
+    }
+  };
+
+  // Fetch job roles for the modal
+  const fetchJobRoles = async () => {
+    try {
+      const token = Cookies.get("token");
+      const response = await api.get("/admin/job-roles", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setJobRoles(response.data);
+    } catch (err) {
+      console.error("Failed to load job roles:", err);
+    }
+  };
 
   const validateJobRoleName = (name) => {
     if (/^\d+$/.test(name)) {
@@ -78,11 +155,10 @@ const Resource = () => {
 
       if (response.status === 201) {
         alert("Job role created successfully!");
-        const newJobRole = {
-          _id: response.data.jobRole._id || Date.now().toString(),
-          jobRoleName: newResource.name.trim()
-        };
-        setJobRoles(prevJobRoles => [...prevJobRoles, newJobRole]);
+        
+        // Refresh all data to get the updated resource list
+        await fetchAllData();
+        
         setNewResource({ name: "" });
         setJobRoleError("");
         setShowCreateModalJob(false);
@@ -126,13 +202,10 @@ const Resource = () => {
 
       if (response.status === 200) {
         alert("Job role updated successfully!");
-        setJobRoles(prevJobRoles => 
-          prevJobRoles.map(role => 
-            role._id === jobRoleId 
-              ? { ...role, jobRoleName: newName }
-              : role
-          )
-        );
+        
+        // Refresh all data
+        await fetchAllData();
+        
         return true;
       }
     } catch (err) {
@@ -172,9 +245,9 @@ const Resource = () => {
 
       if (response.status === 200) {
         alert("Job role deleted successfully!");
-        setJobRoles(prevJobRoles => 
-          prevJobRoles.filter(role => role._id !== jobRoleId)
-        );
+        
+        // Refresh all data
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Job role deletion failed:", err);
@@ -217,13 +290,13 @@ const Resource = () => {
 
       if (response.status === 201) {
         alert("Team created successfully!");
-        const newTeam = {
-          _id: response.data.team._id || Date.now().toString(),
-          teamName: newResource.name.trim()
-        };
-        setTeams(prevTeams => [...prevTeams, newTeam]);
+        
+        // Refresh all data
+        await fetchAllData();
+        
         setNewResource({ name: "" });
         setTeamError("");
+        setShowCreateModal(false);
       }
     } catch (err) {
       console.error("Team creation failed:", err);
@@ -264,13 +337,10 @@ const Resource = () => {
 
       if (response.status === 200) {
         alert("Team updated successfully!");
-        setTeams(prevTeams => 
-          prevTeams.map(team => 
-            team._id === teamId 
-              ? { ...team, teamName: newName }
-              : team
-          )
-        );
+        
+        // Refresh all data
+        await fetchAllData();
+        
         return true;
       }
     } catch (err) {
@@ -310,9 +380,9 @@ const Resource = () => {
 
       if (response.status === 200) {
         alert("Team deleted successfully!");
-        setTeams(prevTeams => 
-          prevTeams.filter(team => team._id !== teamId)
-        );
+        
+        // Refresh all data
+        await fetchAllData();
       }
     } catch (err) {
       console.error("Team deletion failed:", err);
@@ -328,39 +398,19 @@ const Resource = () => {
   };
 
   useEffect(() => {
-    const fetchTeams = async () => {
-      if (!showCreateModal) return;
+    fetchAllData();
+  }, [navigate]);
 
-      try {
-        const token = Cookies.get("token");
-        const response = await api.get("/admin/teams", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setTeams(response.data);
-      } catch (err) {
-        console.error("Failed to load teams:", err);
-      }
-    };
-
-    fetchTeams();
+  useEffect(() => {
+    if (showCreateModal) {
+      fetchTeams();
+    }
   }, [showCreateModal]);
 
   useEffect(() => {
-    const fetchJobRoles = async () => {
-      if (!showCreateModalJob) return;
-
-      try {
-        const token = Cookies.get("token");
-        const response = await api.get("/admin/job-roles", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setJobRoles(response.data);
-      } catch (err) {
-        console.error("Failed to load job roles:", err);
-      }
-    };
-
-    fetchJobRoles();
+    if (showCreateModalJob) {
+      fetchJobRoles();
+    }
   }, [showCreateModalJob]);
 
   const handleViewTeam = async (resource) => {
@@ -372,52 +422,35 @@ const Resource = () => {
         return;
       }
 
+      console.log("🔍 Fetching users for:", resource);
+
       const response = await api.get(
         `/admin/resourceItems/${resource.position}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
+      console.log("✅ Users response:", response.data);
+      
       setResourceItems(response.data);
       setSelectedResource(resource);
       setShowTeamModal(true);
-      setLoading(false);
     } catch (err) {
-      console.error("Error fetching resource items:", err);
-      alert("Failed to load team data. Please try again.");
-      if (err.response?.status === 401) {
+      console.error("❌ Error fetching resource items:", err);
+      
+      if (err.response?.status === 404) {
+        // No users found for this resource
+        setResourceItems([]);
+        setSelectedResource(resource);
+        setShowTeamModal(true);
+        console.log("No users found for this resource");
+      } else if (err.response?.status === 401) {
+        alert("Unauthorized. Please log in.");
         navigate("/login");
+      } else {
+        alert("Failed to load team data. Please try again.");
       }
     }
   };
-
-  useEffect(() => {
-    const fetchResourceData = async () => {
-      try {
-        const token = Cookies.get("token");
-        if (!token) {
-          alert("Unauthorized. Please log in.");
-          navigate("/login");
-          return;
-        }
-
-        const response = await api.get(
-          "/admin/learning_resource",
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setResource(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Resource fetch error:", err);
-        alert("Failed to load resource data. Please try again.");
-        if (err.response?.status === 401) {
-          navigate("/login");
-        }
-      }
-    };
-
-    fetchResourceData();
-  }, [navigate]);
 
   // Filter resources based on search
   const filteredResources = resource.filter(
@@ -502,7 +535,10 @@ const Resource = () => {
                     ID
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Position
+                    Position/Team
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Members
@@ -514,7 +550,7 @@ const Resource = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentItems.map((res, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors">
+                  <tr key={res._id || index} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {indexOfFirstItem + index + 1}
                     </td>
@@ -522,8 +558,19 @@ const Resource = () => {
                       {res.position || "Uncategorized"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        res.type === 'jobRole' 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : res.type === 'team'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {res.type === 'jobRole' ? 'Job Role' : res.type === 'team' ? 'Team' : 'Category'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {res.count} members
+                        {res.count || 0} members
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
@@ -542,7 +589,7 @@ const Resource = () => {
             {filteredResources.length === 0 && (
               <div className="text-center py-12">
                 <div className="text-gray-500 mb-2">No resources found</div>
-                <div className="text-gray-400 text-sm">Try adjusting your search query</div>
+                <div className="text-gray-400 text-sm">Try creating a new job role or team</div>
               </div>
             )}
           </div>
@@ -613,18 +660,26 @@ const Resource = () => {
         <div className="md:hidden">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {currentItems.map((res, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow">
+              <div key={res._id || index} className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-blue-600">
                         {res.position || "Uncategorized"}
                       </h3>
-                      <span className="text-xs text-gray-500">ID: {indexOfFirstItem + index + 1}</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        res.type === 'jobRole' 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : res.type === 'team'
+                          ? 'bg-orange-100 text-orange-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {res.type === 'jobRole' ? 'Job Role' : res.type === 'team' ? 'Team' : 'Category'}
+                      </span>
                     </div>
                     <div className="mt-1">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {res.count} members
+                        {res.count || 0} members
                       </span>
                     </div>
                   </div>
@@ -641,7 +696,7 @@ const Resource = () => {
             {filteredResources.length === 0 && (
               <div className="col-span-full text-center py-8 bg-white rounded-xl shadow-md">
                 <div className="text-gray-500 mb-2">No resources found</div>
-                <div className="text-gray-400 text-sm">Try adjusting your search query</div>
+                <div className="text-gray-400 text-sm">Try creating a new job role or team</div>
               </div>
             )}
           </div>
@@ -683,7 +738,6 @@ const Resource = () => {
         </div>
       </div>
 
-      {/* Rest of your modals remain the same */}
       {/* Enhanced Create Job Role Modal */}
       {showCreateModalJob && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
@@ -1025,16 +1079,40 @@ const Resource = () => {
                       <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase">Role</th>
                       <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase">Email</th>
                       <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase">Contact</th>
+                      <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase">University</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {resourceItems.map((user) => (
                       <tr key={user._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">{user._id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-blue-600">{`${user.firstName} ${user.lastName}`}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono">
+                          {user.userCode || user._id}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-medium">
-                            {user.role}
+                          <div className="flex items-center">
+                            {user.profileImage ? (
+                              <img 
+                                src={user.profileImage} 
+                                alt={`${user.firstName} ${user.lastName}`}
+                                className="w-8 h-8 rounded-full mr-3"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <User className="w-4 h-4 text-blue-600" />
+                              </div>
+                            )}
+                            <span className="text-blue-600 font-medium">
+                              {user.firstName} {user.lastName}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            user.role === 'admin' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {user.role || 'employee'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1042,7 +1120,10 @@ const Resource = () => {
                             {user.email}
                           </a>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{user.contactNumber}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{user.contactNumber || 'N/A'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {user.university || 'N/A'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1051,7 +1132,9 @@ const Resource = () => {
                 {resourceItems.length === 0 && (
                   <div className="text-center py-12">
                     <div className="text-gray-500 mb-2">No team members found</div>
-                    <div className="text-gray-400 text-sm">This position has no assigned members</div>
+                    <div className="text-gray-400 text-sm">
+                      No users are currently assigned to this {selectedResource?.type || 'resource'}
+                    </div>
                   </div>
                 )}
               </div>
